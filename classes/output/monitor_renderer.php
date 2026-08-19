@@ -65,6 +65,7 @@ class monitor_renderer extends plugin_renderer_base {
         return [
             'cmid' => $state->cmid,
             'quizname' => $state->quizname,
+            'quizpassword' => $state->quizpassword,
             'totalstudents' => $state->totalstudents,
             'hasstudents' => (bool) $state->hasstudents,
             'updatedat' => $state->updatedat,
@@ -80,6 +81,7 @@ class monitor_renderer extends plugin_renderer_base {
             'onesessionactive' => $onesessionactive,
             'canunblock' => $canunblock,
             'inprogresscount' => $inprogresscount,
+            'showpasswordlabel' => get_string('showpassword:label', 'quiz_livequizmonitor'),
             'bulkextenddisabled' => $inprogresscount === 0,
             'bulkextendlabel' => get_string('extend:bulklabel', 'quiz_livequizmonitor'),
             'extendrowlabel' => get_string('extend:rowaction', 'quiz_livequizmonitor'),
