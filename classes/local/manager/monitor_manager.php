@@ -340,7 +340,16 @@ class monitor_manager {
                     $endtime = $accessmanager->get_end_time($attempt);
                     if ($endtime !== false) {
                         $attemptendat = (int) $endtime;
+
+                        // When there is no time limit and timeclose is more than an hour away,
+                        // timeremaining is set to FALSE and 00:00 is displayed in the monitor.
+                        // This is not what we want, so we recalculate and override it.
+                        // See QUIZ_SHOW_TIME_BEFORE_DEADLINE.
+                        if ($timeremaining === false && $endtime > $now) {
+                            $timeremaining = $endtime - $now;
+                        }
                     }
+                    // Format timeremaining.
                     if ($timeremaining !== false && $timeremaining >= 0) {
                         $timeremainingdisplay = self::format_duration((int) $timeremaining);
                     } else if ($timeremaining !== false && $timeremaining < 0) {
