@@ -15,10 +15,12 @@
         "noteseditlabel": "Edit note",
         "unblocklabel": "Unblock",
         "blockedflaglabel": "Blocked",
+        "showlogslabel": "Show logs",
         "actionsmenulabel": "Actions",
         "canextend": true,
         "onesessionactive": false,
         "canunblock": false,
+        "canviewlogs": true,
         "quizname": "Midterm quiz",
         "liveindicator": "Live",
         "updatedattext": "Last updated: 12:00",
@@ -53,6 +55,7 @@
 <div class="livequizmonitor-root" data-region="live-quiz-monitor"
      data-cmid="{{cmid}}"
      data-groupid="{{groupid}}"
+     data-courseid="{{courseid}}"
      data-show-email="{{#showemailcolumn}}1{{/showemailcolumn}}{{^showemailcolumn}}0{{/showemailcolumn}}"
      data-show-actions="{{#showactionscolumn}}1{{/showactionscolumn}}{{^showactionscolumn}}0{{/showactionscolumn}}"
      data-lastupdated-prefix="{{lastupdatedprefix}}"
@@ -61,10 +64,12 @@
      data-notes-edit-label="{{noteseditlabel}}"
      data-unblock-label="{{unblocklabel}}"
      data-blocked-flag-label="{{blockedflaglabel}}"
+     data-show-logs-label="{{showlogslabel}}"
      data-actions-menu-label="{{actionsmenulabel}}"
      data-canextend="{{#canextend}}1{{/canextend}}{{^canextend}}0{{/canextend}}"
      data-onesession-active="{{#onesessionactive}}1{{/onesessionactive}}{{^onesessionactive}}0{{/onesessionactive}}"
-     data-canunblock="{{#canunblock}}1{{/canunblock}}{{^canunblock}}0{{/canunblock}}">
+     data-canunblock="{{#canunblock}}1{{/canunblock}}{{^canunblock}}0{{/canunblock}}"
+     data-canviewlogs="{{#canviewlogs}}1{{/canviewlogs}}{{^canviewlogs}}0{{/canviewlogs}}">
 
     <div class="livequizmonitor-header d-flex flex-wrap align-items-center justify-content-between mb-3">
         <div>
