@@ -24,6 +24,11 @@
 
 defined('MOODLE_INTERNAL') || die();
 
+$string['attempts:errorload'] = 'Failed to load attempts. Please try again.';
+$string['attempts:modaltitle'] = 'Recent attempts for {$a}';
+$string['attempts:noattempts'] = 'No attempts found for this student.';
+$string['attempts:showlabel'] = 'Show attempts';
+$string['attempts:showmore'] = 'Show more';
 $string['emptycohort'] = 'No eligible students were found for this quiz.';
 $string['error:groupnotvisible'] = 'You do not have permission to view that group in this monitor.';
 $string['error:usernotvisible'] = 'The selected student is not visible in this monitor view.';
@@ -92,6 +97,7 @@ $string['staleindicator'] = 'Updates paused — showing last known data';
 $string['status:completed'] = 'Completed';
 $string['status:inprogress'] = 'In progress';
 $string['status:notstarted'] = 'Not started';
+$string['strftimerecentaccurate'] = '%d %b, %H:%M:%S';
 $string['summary:completed'] = 'Completed';
 $string['summary:inprogress'] = 'In progress';
 $string['summary:notstarted'] = 'Not started';
@@ -101,4 +107,6 @@ $string['table:progress'] = 'Progress';
 $string['table:status'] = 'Status';
 $string['table:student'] = 'Student';
 $string['table:timeremaining'] = 'Time left';
+$string['timefinish'] = 'Time finished';
+$string['timestart'] = 'Time started';
 $string['timeup'] = 'Time up';

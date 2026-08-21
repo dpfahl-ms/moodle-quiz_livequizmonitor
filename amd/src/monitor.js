@@ -71,8 +71,9 @@ class MonitorComponent extends BaseComponent {
         this.syncQueued = false;
         this.hasReceivedPoll = false;
         const root = descriptor.element ?? this.element;
-        this.cmid = parseInt(descriptor.cmid ?? root.dataset.cmid, 10);
+        this.cmid = parseInt(descriptor.cmid ?? root.dataset.cmid ?? 0, 10);
         this.groupid = parseInt(descriptor.groupid ?? root.dataset.groupid ?? 0, 10);
+        this.courseId = parseInt(descriptor.courseid ?? root.dataset.courseid ?? 1, 10);
         this.showEmailColumn = root.dataset.showEmail === '1';
         this.showActionsColumn = root.dataset.showActions === '1';
         this.lastUpdatedPrefix = root.dataset.lastupdatedPrefix ?? '';
@@ -85,6 +86,8 @@ class MonitorComponent extends BaseComponent {
         this.canunblock = root.dataset.canunblock === '1';
         this.unblockRowLabel = root.dataset.unblockLabel ?? 'Unblock user';
         this.blockedFlagLabel = root.dataset.blockedFlagLabel ?? 'Blocked';
+        this.showAttemptsLabel = root.dataset.showAttemptsLabel ?? 'Show_attempts';
+        this.canviewattempts = root.dataset.canviewattempts === '1';
     }
 
     /**
@@ -596,8 +599,12 @@ class MonitorComponent extends BaseComponent {
     buildStudentRowContext(student) {
         const canextend = !!(student.canextend ?? this.canextend);
         return {
+            courseid: student.courseid ?? this.courseId,
+            cmid: student.cmid ?? this.cmid,
             userid: student.userid ?? student.id,
-            fullname: student.fullname ?? '',
+            fullname: student.fullname,
+            firstinitial: student.firstinitial,
+            lastinitial: student.lastinitial,
             email: student.email ?? '',
             statusclass: student.statusclass ?? '',
             statuslabel: student.statuslabel ?? '',
@@ -621,7 +628,9 @@ class MonitorComponent extends BaseComponent {
             extendrowlabel: this.extendRowLabel,
             unblocklabel: this.unblockRowLabel,
             blockedflaglabel: this.blockedFlagLabel,
+            showattemptslabel: this.showAttemptsLabel,
             actionsmenulabel: this.actionsMenuLabel,
+            canviewattempts: this.canviewattempts,
         };
     }
 
@@ -956,6 +965,10 @@ class MonitorComponent extends BaseComponent {
             ? `<i class="fa-solid fa-flag livequizmonitor-blocked-flag" title="${blockedflaglabel}" aria-hidden="true"></i>`
             : '';
 
+        // To reduce code complexity, as measured by Grunt,
+        // the attemptsItem html is built in a separate function.
+        const attemptsItem = this.buildAttemptsItemHtml(student);
+
         return `
             <div class="livequizmonitor-actions-inner">
                 <div class="dropdown livequizmonitor-row-actions" data-region="row-actions">
@@ -978,11 +991,49 @@ class MonitorComponent extends BaseComponent {
                            data-hasnote="${hasnote}">
                             <i class="fa-solid fa-book" aria-hidden="true"></i>
                             <span class="menu-action-text">${notelabel}</span>
-                        </a>${extendItem}${unblockItem}
+                        </a>${extendItem}${unblockItem}${attemptsItem}
                     </div>
                 </div>${flagHtml}
             </div>
         `;
+    }
+
+    /**
+     * Build the menu item for viewing student attempts.
+     *
+     * @param {object} student data about the current student.
+     * @returns {string} HTML for the attempts menu item.
+     */
+    buildAttemptsItemHtml(student) {
+        if (!this.canviewattempts) {
+            return '';
+        }
+
+        const attemptsParams = new URLSearchParams({
+            id: this.cmid,
+            mode: 'overview',
+        });
+
+        if (student.firstinitial) {
+            attemptsParams.set('tifirst', student.firstinitial);
+        }
+
+        if (student.lastinitial) {
+            attemptsParams.set('tilast', student.lastinitial);
+        }
+
+        const attemptslabel = this.escapeHtml(this.showAttemptsLabel);
+
+        return `
+                            <a href="${M.cfg.wwwroot}/mod/quiz/report.php?${attemptsParams.toString()}"
+                            class="dropdown-item"
+                            role="menuitem"
+                            target="_blank">
+                                <i class="fa-solid fa-clipboard-list" aria-hidden="true"></i>
+                                <span class="menu-action-text">${attemptslabel}</span>
+                                <i class="fa-solid fa-up-right-from-square" aria-hidden="true"
+                                title="${M.util.get_string('opensinnewwindow', 'core')}"></i>
+                            </a>`;
     }
 
     /**
