@@ -43,13 +43,14 @@ class monitor_renderer extends plugin_renderer_base {
         $updated = userdate($state->updatedat, get_string('strftimetime', 'langconfig'));
         $canextend = !empty($state->canextend);
         $inprogresscount = (int) ($state->inprogresscount ?? $state->summary->inprogress->count);
+        $idlecount = (int) ($state->idlecount ?? $state->summary->idle->count);
         $onesessionactive = !empty($state->onesessionactive);
         $canunblock = !empty($state->canunblock);
 
         $students = [];
         foreach ($state->students as $row) {
             $student = (array) $row;
-            $student['extendactionenabled'] = $canextend && $row->status === monitor_manager::STATUS_INPROGRESS;
+            $student['extendactionenabled'] = $canextend && in_array($row->status, monitor_manager::INPROGRESS_OR_IDLE, true);
             $student['canextend'] = $canextend;
             $student['onesessionactive'] = $onesessionactive;
             $student['canunblock'] = $canunblock;
@@ -80,7 +81,8 @@ class monitor_renderer extends plugin_renderer_base {
             'onesessionactive' => $onesessionactive,
             'canunblock' => $canunblock,
             'inprogresscount' => $inprogresscount,
-            'bulkextenddisabled' => $inprogresscount === 0,
+            'idlecount' => $idlecount,
+            'bulkextenddisabled' => ($inprogresscount + $idlecount) === 0,
             'bulkextendlabel' => get_string('extend:bulklabel', 'quiz_livequizmonitor'),
             'extendrowlabel' => get_string('extend:rowaction', 'quiz_livequizmonitor'),
             'notesaddlabel' => get_string('notes:addlabel', 'quiz_livequizmonitor'),
@@ -127,6 +129,12 @@ class monitor_renderer extends plugin_renderer_base {
                     'status' => 'notstarted',
                     'label' => get_string('status:notstarted', 'quiz_livequizmonitor'),
                     'count' => $summary->notstarted->count,
+                    'active' => false,
+                ],
+                [
+                    'status' => 'idle',
+                    'label' => get_string('status:idle', 'quiz_livequizmonitor'),
+                    'count' => $summary->idle->count,
                     'active' => false,
                 ],
                 [

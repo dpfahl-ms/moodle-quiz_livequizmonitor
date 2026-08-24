@@ -35,6 +35,12 @@ const emptySummary = () => ({
         label: '',
         statusclass: 'border-secondary',
     },
+    idle: {
+        count: 0,
+        percent: 0,
+        label: '',
+        statusclass: 'border-danger',
+    },
     inprogress: {
         count: 0,
         percent: 0,
@@ -72,6 +78,7 @@ export const createInitialState = () => ({
         },
         canextend: false,
         inprogresscount: 0,
+        idlecount: 0,
         onesessionactive: false,
         canunblock: false,
     },
@@ -115,6 +122,9 @@ class MonitorMutations {
         if (payload.inprogresscount !== undefined) {
             stateManager.state.meta.inprogresscount = payload.inprogresscount;
         }
+        if (payload.idlecount !== undefined) {
+            stateManager.state.meta.idlecount = payload.idlecount;
+        }
         if (payload.onesessionactive !== undefined) {
             stateManager.state.meta.onesessionactive = payload.onesessionactive;
         }
@@ -123,7 +133,7 @@ class MonitorMutations {
         }
 
         // Update summary buckets in place so watchers receive summary.<bucket>:updated events.
-        ['notstarted', 'inprogress', 'completed'].forEach((key) => {
+        ['notstarted', 'inprogress', 'idle', 'completed'].forEach((key) => {
             if (payload.summary?.[key]) {
                 stateManager.state.summary[key] = payload.summary[key];
             }
