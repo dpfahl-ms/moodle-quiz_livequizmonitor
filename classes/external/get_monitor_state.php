@@ -46,6 +46,8 @@ class get_monitor_state extends external_api {
         return new external_function_parameters([
             'cmid' => new external_value(PARAM_INT, 'Course module id of the quiz'),
             'groupid' => new external_value(PARAM_INT, 'Group id filter', VALUE_DEFAULT, 0),
+            'sortcolumn' => new external_value(PARAM_ALPHANUM, 'Sort column name', VALUE_DEFAULT, 'status'),
+            'sortdirection' => new external_value(PARAM_ALPHA, 'Sort direction', VALUE_DEFAULT, 'asc'),
         ]);
     }
 
@@ -54,14 +56,23 @@ class get_monitor_state extends external_api {
      *
      * @param int $cmid Course module id.
      * @param int $groupid Group id.
+     * @param string $sortcolumn Sort column name.
+     * @param string $sortdirection Sort direction.
      * @return array
      */
-    public static function execute(int $cmid, int $groupid = 0): array {
+    public static function execute(
+        int $cmid,
+        int $groupid = 0,
+        string $sortcolumn = 'status',
+        string $sortdirection = 'asc'
+    ): array {
         global $DB;
 
         $params = self::validate_parameters(self::execute_parameters(), [
             'cmid' => $cmid,
             'groupid' => $groupid,
+            'sortcolumn' => $sortcolumn,
+            'sortdirection' => $sortdirection,
         ]);
 
         $cm = get_coursemodule_from_id('quiz', $params['cmid'], 0, false, MUST_EXIST);
@@ -74,7 +85,14 @@ class get_monitor_state extends external_api {
 
         supervision_scope_manager::validate_group_access((int) $params['groupid'], $cm);
 
-        $state = monitor_manager::get_state($course, $cm, $quiz, (int) $params['groupid']);
+        $state = monitor_manager::get_state(
+            $course,
+            $cm,
+            $quiz,
+            (int) $params['groupid'],
+            (string) $params['sortcolumn'],
+            (string) $params['sortdirection']
+        );
 
         return self::export_state($state);
     }
@@ -143,6 +161,8 @@ class get_monitor_state extends external_api {
                 'completed' => $statuscount,
             ]),
             'students' => new external_multiple_structure($student),
+            'sortcolumn' => new external_value(PARAM_ALPHANUM, 'Sort column'),
+            'sortdirection' => new external_value(PARAM_ALPHA, 'Sort direction'),
         ]);
     }
 
@@ -206,6 +226,8 @@ class get_monitor_state extends external_api {
                 'completed' => (array) $summary->completed,
             ],
             'students' => $students,
+            'sortcolumn' => $state->sortcolumn,
+            'sortdirection' => $state->sortdirection,
         ];
     }
 }

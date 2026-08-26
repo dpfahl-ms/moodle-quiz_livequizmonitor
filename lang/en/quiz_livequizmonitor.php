@@ -88,6 +88,7 @@ $string['privacy:metadata:notes:timemodified'] = 'When the note was last modifie
 $string['privacy:metadata:notes:userid'] = 'The student the note is about.';
 $string['privacy:metadata:notes:usermodified'] = 'The user who last edited the note.';
 $string['progressanswered'] = '{$a->answered} of {$a->total} answered';
+$string['sortby'] = 'Sort by {$a}';
 $string['staleindicator'] = 'Updates paused — showing last known data';
 $string['status:completed'] = 'Completed';
 $string['status:inprogress'] = 'In progress';

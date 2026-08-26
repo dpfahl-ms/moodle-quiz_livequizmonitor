@@ -70,6 +70,8 @@ export const createInitialState = () => ({
             search: '',
             status: 'all',
         },
+        sortcolumn: 'status',
+        sortdirection: 'asc',
         canextend: false,
         inprogresscount: 0,
         onesessionactive: false,
@@ -108,6 +110,8 @@ class MonitorMutations {
         stateManager.state.meta.updatedat = payload.updatedat;
         stateManager.state.meta.totalstudents = payload.totalstudents;
         stateManager.state.meta.hasstudents = payload.hasstudents;
+        stateManager.state.meta.sortcolumn = payload.sortcolumn;
+        stateManager.state.meta.sortdirection = payload.sortdirection;
         stateManager.state.meta.stale = false;
         if (payload.canextend !== undefined) {
             stateManager.state.meta.canextend = payload.canextend;
@@ -174,6 +178,29 @@ class MonitorMutations {
             const current = stateManager.state.meta.filters.status;
             stateManager.state.meta.filters.status = current === status ? 'all' : status;
         }
+        stateManager.setReadOnly(true);
+    }
+
+    /**
+     * Update the sort column and direction.
+     *
+     * @param {StateManager} stateManager
+     * @param {string} column Name of the selected column
+     */
+    setSort(stateManager, column) {
+        stateManager.setReadOnly(false);
+
+        const meta = stateManager.state.meta;
+
+        if (meta.sortcolumn === column) {
+            // Subsequent clicks on the same column toggle the sort direction.
+            meta.sortdirection = meta.sortdirection === 'asc' ? 'desc' : 'asc';
+        } else {
+            // First click on a column sets column name and initial sort direction.
+            meta.sortcolumn = column;
+            meta.sortdirection = 'asc';
+        }
+
         stateManager.setReadOnly(true);
     }
 
