@@ -95,9 +95,18 @@ class monitor_manager {
      * @param cm_info|stdClass $cm Course module record or cached cm_info.
      * @param stdClass $quiz Quiz instance record.
      * @param int $groupid Active group id (0 = all visible groups).
+     * @param string $sortcolumn Column to sort by.
+     * @param string $sortdirection Sort direction ('asc' or 'desc').
      * @return stdClass MonitorState payload.
      */
-    public static function get_state(stdClass $course, cm_info|stdClass $cm, stdClass $quiz, int $groupid = 0): stdClass {
+    public static function get_state(
+        stdClass $course,
+        cm_info|stdClass $cm,
+        stdClass $quiz,
+        int $groupid = 0,
+        string $sortcolumn = 'status',
+        string $sortdirection = 'asc'
+    ): stdClass {
         global $DB;
 
         $context = context_module::instance($cm->id);
@@ -132,7 +141,7 @@ class monitor_manager {
             $rows[] = self::build_student_row($user, $relevant, $totalquestions, $quiz, $context, $now, $showemail);
         }
 
-        self::sort_student_rows($rows);
+        self::sort_student_rows($rows, $sortcolumn, $sortdirection);
 
         $userids = array_map(static fn(stdClass $row): int => (int) $row->userid, $rows);
         $hasnotemap = student_note_manager::get_hasnote_map((int) $quiz->id, $userids);
@@ -177,6 +186,8 @@ class monitor_manager {
             'inprogresscount' => $inprogresscount,
             'onesessionactive' => $onesessionactive,
             'canunblock' => $canunblock,
+            'sortcolumn' => $sortcolumn,
+            'sortdirection' => $sortdirection,
         ];
 
         return $state;
@@ -443,23 +454,74 @@ class monitor_manager {
     }
 
     /**
-     * Sort rows: in progress, not started, completed; then by fullname.
+     * Sort rows by the requested column and direction.
      *
      * @param array $rows Student rows (by reference).
+     * @param string $sortcolumn Column to sort by.
+     * @param string $sortdirection Sort direction: asc or desc.
      */
-    protected static function sort_student_rows(array &$rows): void {
+    protected static function sort_student_rows(
+        array &$rows,
+        string $sortcolumn = 'status',
+        string $sortdirection = 'asc'
+    ): void {
+        $sortable = [
+            'status' => 'status',
+            'fullname' => 'fullname',
+            'email' => 'email',
+            'progress' => 'progresspercent',
+            'timeremaining' => 'timeremaining',
+        ];
+
+        // Sanity check on incoming values.
+        $sortcolumn = $sortable[$sortcolumn] ?? 'status';
+        $sortdirection = $sortdirection === 'desc' ? 'desc' : 'asc';
+
         $rank = [
             self::STATUS_INPROGRESS => 0,
             self::STATUS_NOTSTARTED => 1,
             self::STATUS_COMPLETED => 2,
         ];
 
-        usort($rows, static function (stdClass $a, stdClass $b) use ($rank): int {
-            $cmp = ($rank[$a->status] ?? 99) <=> ($rank[$b->status] ?? 99);
-            if ($cmp !== 0) {
-                return $cmp;
+        usort($rows, static function (
+            stdClass $a,
+            stdClass $b
+        ) use (
+            $sortcolumn,
+            $sortdirection,
+            $rank
+        ): int {
+            if ($sortcolumn === 'status') {
+                // Status uses defined rank rather than alphabetical order.
+                // The spaceship operator, <=>, works like strcmp for numbers.
+                $cmp = ($rank[$a->status] ?? 99) <=> ($rank[$b->status] ?? 99);
+            } else {
+                $valuea = $a->{$sortcolumn} ?? null;
+                $valueb = $b->{$sortcolumn} ?? null;
+
+                if ($valuea === $valueb) {
+                    $cmp = 0;
+                } else if ($valuea === null) {
+                    $cmp = 1;
+                } else if ($valueb === null) {
+                    $cmp = -1;
+                } else if (is_numeric($valuea) && is_numeric($valueb)) {
+                    $cmp = $valuea <=> $valueb;
+                } else {
+                    $cmp = strcmp((string) $valuea, (string) $valueb);
+                }
             }
-            return strcmp($a->fullname, $b->fullname);
+
+            // If values are identical, use fullname sort order.
+            if ($cmp === 0) {
+                $cmp = strcmp($a->fullname, $b->fullname);
+            }
+
+            if ($sortdirection === 'desc') {
+                $cmp = -$cmp;
+            }
+
+            return $cmp;
         });
     }
 

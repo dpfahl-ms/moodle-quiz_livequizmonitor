@@ -8,14 +8,56 @@
         "filterempty": "No students match the current filters.",
         "showemailcolumn": true,
         "showactionscolumn": true,
-        "tableheaders": {
-            "status": "Status",
-            "student": "Student",
-            "email": "Email",
-            "progress": "Progress",
-            "timeremaining": "Time remaining",
-            "actions": "Actions"
-        },
+        "tableheaders": [
+            {
+                "label": "Status",
+                "sortcolumn": "status",
+                "active": true,
+                "sorticon": "fa-arrow-up-short-wide",
+                "sortlabel": "Ascending",
+                "sortclass": "text-primary",
+                "sortbylabel": "Sort by Status"
+            },
+            {
+                "label": "Student",
+                "sortcolumn": "fullname",
+                "active": false,
+                "sorticon": "fa-arrow-up-short-wide",
+                "sortlabel": "Sort by Student",
+                "sortclass": "text-secondary",
+                "sortbylabel": "Sort by Student"
+            },
+            {
+                "label": "Email",
+                "sortcolumn": "email",
+                "active": false,
+                "sorticon": "fa-arrow-up-short-wide",
+                "sortlabel": "Sort by Email",
+                "sortclass": "text-secondary",
+                "sortbylabel": "Sort by Email"
+            },
+            {
+                "label": "Progress",
+                "sortcolumn": "progress",
+                "active": false,
+                "sorticon": "fa-arrow-up-short-wide",
+                "sortlabel": "Sort by Progress",
+                "sortclass": "text-secondary",
+                "sortbylabel": "Sort by Progress"
+            },
+            {
+                "label": "Time remaining",
+                "sortcolumn": "timeremaining",
+                "active": false,
+                "sorticon": "fa-arrow-up-short-wide",
+                "sortlabel": "Sort by Time remaining",
+                "sortclass": "text-secondary",
+                "sortbylabel": "Sort by Time remaining"
+            }
+        ],
+        "actionscolumnlabel": "Actions",
+        "sortascending": "Ascending",
+        "sortdescending": "Descending",
         "students": []
     }
 }}
@@ -24,20 +66,20 @@
 </div>
 <div class="table-responsive livequizmonitor-student-list" data-region="student-table">
     <table class="table table-striped generaltable livequizmonitor-table">
-        <thead>
-            <tr>
-                <th>{{tableheaders.status}}</th>
-                <th>{{tableheaders.student}}</th>
-                {{#showemailcolumn}}
-                <th>{{tableheaders.email}}</th>
-                {{/showemailcolumn}}
-                <th>{{tableheaders.progress}}</th>
-                <th>{{tableheaders.timeremaining}}</th>
-                {{#showactionscolumn}}
-                <th>{{tableheaders.actions}}</th>
-                {{/showactionscolumn}}
-            </tr>
-        </thead>
+    <thead>
+        <tr>
+            {{#tableheaders}}
+            <th data-action="sort-column" data-sort-column="{{sortcolumn}}">
+                {{label}}
+                {{> quiz_livequizmonitor/sort_icon}}
+            </th>
+            {{/tableheaders}}
+
+            {{#showactionscolumn}}
+            <th>{{actionscolumnlabel}}</th>
+            {{/showactionscolumn}}
+        </tr>
+    </thead>
         <tbody>
             {{#students}}
             {{> quiz_livequizmonitor/student_row }}

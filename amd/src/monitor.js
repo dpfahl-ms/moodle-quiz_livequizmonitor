@@ -85,6 +85,8 @@ class MonitorComponent extends BaseComponent {
         this.canunblock = root.dataset.canunblock === '1';
         this.unblockRowLabel = root.dataset.unblockLabel ?? 'Unblock user';
         this.blockedFlagLabel = root.dataset.blockedFlagLabel ?? 'Blocked';
+        this.sortAscendingLabel = root.dataset.sortAscending ?? 'Ascending';
+        this.sortDescendingLabel = root.dataset.sortDescending ?? 'Descending';
     }
 
     /**
@@ -131,6 +133,8 @@ class MonitorComponent extends BaseComponent {
             {watch: 'summary.inprogress:updated', handler: this.renderBulkExtendButton},
             {watch: 'summary.completed:updated', handler: this.renderFilterToolbar},
             {watch: 'meta.totalstudents:updated', handler: this.renderFilterToolbar},
+            {watch: 'meta.sortcolumn:updated', handler: this.renderSortIndicators},
+            {watch: 'meta.sortdirection:updated', handler: this.renderSortIndicators},
         ];
     }
 
@@ -139,6 +143,7 @@ class MonitorComponent extends BaseComponent {
      */
     stateReady() {
         this.bindFilterEvents();
+        this.bindSortEvents();
         this.bindExtendEvents();
         this.bindNoteEvents();
         this.startPolling();
@@ -356,6 +361,13 @@ class MonitorComponent extends BaseComponent {
     }
 
     /**
+     * Bind sortable table header events.
+     */
+    bindSortEvents() {
+        this.addEventListener(this.element, 'click', this.handleSortClick);
+    }
+
+    /**
      * Handle search input changes.
      *
      * @param {Event} event
@@ -430,6 +442,29 @@ class MonitorComponent extends BaseComponent {
     }
 
     /**
+     * Delegate clicks on column headings.
+     *
+     * @param {Event} event
+     */
+    handleSortClick(event) {
+        const trigger = event.target.closest('[data-action="sort-column"]');
+
+        if (!trigger || !this.element.contains(trigger)) {
+            return;
+        }
+
+        const column = trigger.dataset.sortColumn;
+
+        if (!column) {
+            return;
+        }
+
+        event.preventDefault();
+        this.reactive.dispatch('setSort', column);
+        this.poll();
+    }
+
+    /**
      * Clean up timers on destroy.
      */
     destroy() {
@@ -461,26 +496,36 @@ class MonitorComponent extends BaseComponent {
 
     /**
      * Poll server for fresh monitor state.
+     *
+     * @returns {Promise<void>}
      */
     async poll() {
         if (this.pollInFlight) {
             return;
         }
+
         this.pollInFlight = true;
         try {
+            const state = this.getState();
+
             const response = await Ajax.call([{
                 methodname: 'quiz_livequizmonitor_get_monitor_state',
                 args: {
                     cmid: this.cmid,
                     groupid: this.groupid,
+                    sortcolumn: state.meta.sortcolumn,
+                    sortdirection: state.meta.sortdirection,
                 },
             }])[0];
+
             if (response.onesessionactive !== undefined) {
                 this.onesessionactive = !!response.onesessionactive;
             }
+
             if (response.canunblock !== undefined) {
                 this.canunblock = !!response.canunblock;
             }
+
             this.reactive.dispatch('refreshState', response);
             this.hasReceivedPoll = true;
             this.renderCohortLayout();
@@ -546,19 +591,76 @@ class MonitorComponent extends BaseComponent {
     }
 
     /**
-     * Return student rows from reactive state (StateMap or array).
+     * Return student rows from reactive state, sorted by the active column.
+     *
+     * Note: the sorting algorithm here mirrors the one in "sort_student_rows()".
+     * See "class/local/manager/monitor_manager.php".
      *
      * @returns {Array}
      */
     getStudentRows() {
-        const students = this.getState()?.students;
+        const state = this.getState();
+        const students = state?.students;
+
         if (!students) {
             return [];
         }
-        if (students instanceof Map) {
-            return [...students.values()];
-        }
-        return students;
+
+        const rows = students instanceof Map ? [...students.values()] : [...students];
+
+        const sortcolumn = state?.meta?.sortcolumn ?? 'status';
+        const sortdirection = state?.meta?.sortdirection ?? 'asc';
+
+        const sortable = {
+            status: 'status',
+            fullname: 'fullname',
+            email: 'email',
+            progress: 'progresspercent',
+            timeremaining: 'timeremaining',
+        };
+
+        const field = sortable[sortcolumn] ?? 'status';
+
+        const statusRank = {
+            inprogress: 0,
+            notstarted: 1,
+            completed: 2,
+        };
+
+        rows.sort((a, b) => {
+            let cmp;
+
+            if (field === 'status') {
+                cmp = (statusRank[a.status] ?? 99) - (statusRank[b.status] ?? 99);
+            } else {
+                const valuea = a[field] ?? null;
+                const valueb = b[field] ?? null;
+
+                if (valuea === valueb) {
+                    cmp = 0;
+                } else if (valuea === null) {
+                    cmp = 1;
+                } else if (valueb === null) {
+                    cmp = -1;
+                } else if (typeof valuea === 'number' && typeof valueb === 'number') {
+                    cmp = valuea - valueb;
+                } else {
+                    cmp = String(valuea).localeCompare(String(valueb));
+                }
+            }
+
+            if (cmp === 0) {
+                cmp = String(a.fullname ?? '').localeCompare(String(b.fullname ?? ''));
+            }
+
+            if (sortdirection === 'desc') {
+                cmp = -cmp;
+            }
+
+            return cmp;
+        });
+
+        return rows;
     }
 
     /**
@@ -877,6 +979,56 @@ class MonitorComponent extends BaseComponent {
         if (tableEl) {
             tableEl.classList.toggle('d-none', showEmpty);
         }
+    }
+
+    /**
+     * Update the sort indicators on the student table headers.
+     */
+    renderSortIndicators() {
+        const state = this.getState();
+        const sortcolumn = state?.meta?.sortcolumn;
+        const sortdirection = state?.meta?.sortdirection;
+
+        const table = this.getElement(this.selectors.STUDENTTABLE);
+        if (!table) {
+            return;
+        }
+
+        const headers = table.querySelectorAll(
+            'th[data-action="sort-column"]'
+        );
+
+        headers.forEach((header) => {
+            const icon = header.querySelector('.icon');
+            if (!icon) {
+                return;
+            }
+
+            const active = header.dataset.sortColumn === sortcolumn;
+            const descending = active && sortdirection === 'desc';
+
+            icon.classList.toggle('text-primary', active);
+            icon.classList.toggle('text-secondary', !active);
+
+            icon.classList.toggle(
+                'fa-arrow-up-short-wide',
+                !descending
+            );
+            icon.classList.toggle(
+                'fa-arrow-down-short-wide',
+                descending
+            );
+
+            if (active) {
+                const label = descending ? this.sortDescendingLabel : this.sortAscendingLabel;
+                icon.setAttribute('title', label);
+                icon.setAttribute('aria-label', label);
+            } else {
+                const label = icon.dataset.sortbyLabel;
+                icon.setAttribute('title', label);
+                icon.setAttribute('aria-label', label);
+            }
+        });
     }
 
     /**

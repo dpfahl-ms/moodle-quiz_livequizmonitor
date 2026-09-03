@@ -27,6 +27,7 @@
 require_once(__DIR__ . '/../../../../../../lib/behat/behat_base.php');
 
 use Moodle\BehatExtension\Exception\SkippedException;
+use Behat\Gherkin\Node\TableNode;
 
 /**
  * Live quiz monitor Behat steps.
@@ -149,5 +150,153 @@ class behat_quiz_livequizmonitor extends behat_base {
         $instance = $DB->get_record('enrol', ['courseid' => $course->id, 'enrol' => 'manual'], '*', MUST_EXIST);
         $plugin = enrol_get_plugin('manual');
         $plugin->unenrol_user($instance, $user->id);
+    }
+
+    /**
+     * Answer a question in a student's quiz attempt.
+     *
+     * @Given /^student "(?P<username>[^"]*)" has answered question (?P<questionnumber>\d+) in quiz "(?P<quizname>[^"]*)"$/
+     * @param string $username Student username.
+     * @param int $questionnumber Question number.
+     * @param string $quizname Quiz name.
+     */
+    public function student_has_answered_question(
+        string $username,
+        int $questionnumber,
+        string $quizname
+    ): void {
+        global $DB;
+
+        $user = $DB->get_record('user', ['username' => $username], '*', MUST_EXIST);
+        $quiz = $DB->get_record('quiz', ['name' => $quizname], '*', MUST_EXIST);
+        $cm = get_coursemodule_from_instance('quiz', $quiz->id, $quiz->course, false, MUST_EXIST);
+
+        $attempt = $this->create_quiz_attempt($quiz, $cm, $user);
+        $quba = $attempt->get_question_usage();
+        $responses = [$questionnumber => 'answer'];
+
+        $generator = testing_util::get_data_generator()->get_plugin_generator('core_question');
+        $postdata = $generator->get_simulated_post_data_for_questions_in_usage(
+            $quba,
+            $responses,
+            false // Simulate "Save" without clicking "Check".
+        );
+        // Process answers, with "false" to indicate "not overdue".
+        $attempt->process_submitted_actions(time(), false, $postdata);
+    }
+
+    /**
+     * Complete a quiz for a student.
+     *
+     * @Given /^student "(?P<username>[^"]*)" has completed quiz "(?P<quizname>[^"]*)"$/
+     * @param string $username Student username.
+     * @param string $quizname Quiz name.
+     */
+    public function student_has_completed_quiz(string $username, string $quizname): void {
+        global $DB;
+
+        $user = $DB->get_record('user', ['username' => $username], '*', MUST_EXIST);
+        $quiz = $DB->get_record('quiz', ['name' => $quizname], '*', MUST_EXIST);
+        $cm = get_coursemodule_from_instance('quiz', $quiz->id, $quiz->course, false, MUST_EXIST);
+
+        $attempt = $this->create_quiz_attempt($quiz, $cm, $user);
+        $quba = $attempt->get_question_usage();
+
+        $responses = [];
+        foreach ($quba->get_slots() as $slot) {
+            $responses[$slot] = 'answer';
+        }
+
+        $generator = testing_util::get_data_generator()->get_plugin_generator('core_question');
+        $postdata = $generator->get_simulated_post_data_for_questions_in_usage(
+            $quba,
+            $responses,
+            false // Simulate "Save" without clicking "Check".
+        );
+
+        // Process answers, with "false" to indicate "not overdue".
+        $attempt->process_submitted_actions(time(), false, $postdata);
+        $attempt->process_finish(time(), true);
+    }
+
+    /**
+     * Create a quiz attempt for a student.
+     *
+     * @param stdClass $quiz
+     * @param stdClass $cm
+     * @param stdClass $user
+     * @return \mod_quiz\quiz_attempt
+     */
+    private function create_quiz_attempt(stdClass $quiz, stdClass $cm, stdClass $user): \mod_quiz\quiz_attempt {
+        $quizobj = \mod_quiz\quiz_settings::create($quiz->id, $user->id);
+
+        $timenow = time();
+        $attempt = quiz_create_attempt($quizobj, 1, false, $timenow, false, $user->id);
+
+        $quba = question_engine::make_questions_usage_by_activity(
+            'mod_quiz',
+            \context_module::instance($cm->id)
+        );
+        $quba->set_preferred_behaviour($quizobj->get_quiz()->preferredbehaviour);
+
+        $attempt = quiz_start_new_attempt($quizobj, $quba, $attempt, 1, $timenow);
+        $attempt = quiz_attempt_save_started($quizobj, $quba, $attempt);
+
+        return \mod_quiz\quiz_attempt::create($attempt->id);
+    }
+
+    /**
+     * Check that students appear in the expected order.
+     *
+     * @Then /^the following students should appear in order:$/
+     * @param TableNode $students Expected student names in order.
+     */
+    public function the_following_students_should_appear_in_order(TableNode $students): void {
+        $expected = [];
+
+        foreach ($students->getRows() as $row) {
+            $expected[] = $row[0];
+        }
+
+        $rows = $this->getSession()->getPage()->findAll(
+            'css',
+            '.livequizmonitor-table tbody tr'
+        );
+
+        \PHPUnit\Framework\Assert::assertCount(
+            count($expected),
+            $rows,
+            'The number of student rows does not match the expected number.'
+        );
+
+        $actual = [];
+
+        foreach ($rows as $row) {
+            $cells = $row->findAll('css', 'td');
+
+            \PHPUnit\Framework\Assert::assertGreaterThanOrEqual(
+                2,
+                count($cells),
+                'A student row does not contain a student name cell.'
+            );
+
+            $actual[] = trim($cells[1]->getText());
+        }
+
+        \PHPUnit\Framework\Assert::assertSame($expected, $actual);
+    }
+
+    /**
+     * Click a live monitor column header.
+     *
+     * @When /^I click on the "(?P<column>[^"]*)" column header$/
+     * @param string $column Column heading text.
+     */
+    public function i_click_on_the_column_header(string $column): void {
+        $header = $this->find(
+            'css',
+            '.livequizmonitor-table thead th[data-sort-column="' . $column . '"]'
+        );
+        $header->click();
     }
 }
