@@ -150,4 +150,44 @@ class behat_quiz_livequizmonitor extends behat_base {
         $plugin = enrol_get_plugin('manual');
         $plugin->unenrol_user($instance, $user->id);
     }
+
+    /**
+     * Create a user override with an extended time limit for a student.
+     *
+     * @Given /^user "(?P<username>[^"]*)" has a time limit override on quiz "(?P<quizname>[^"]*)"$/
+     * @param string $username Student username.
+     * @param string $quizname Quiz activity name.
+     */
+    public function user_has_a_time_limit_override_on_quiz(string $username, string $quizname): void {
+        global $DB;
+
+        $user = $DB->get_record('user', ['username' => $username], 'id', MUST_EXIST);
+        $quiz = $DB->get_record('quiz', ['name' => $quizname], 'id', MUST_EXIST);
+
+        $DB->insert_record('quiz_overrides', (object) [
+            'quiz' => $quiz->id,
+            'userid' => $user->id,
+            'timelimit' => 3600,
+        ]);
+    }
+
+    /**
+     * Create a user override that only changes the allowed attempts (not time-related).
+     *
+     * @Given /^user "(?P<username>[^"]*)" has an attempts override on quiz "(?P<quizname>[^"]*)"$/
+     * @param string $username Student username.
+     * @param string $quizname Quiz activity name.
+     */
+    public function user_has_an_attempts_override_on_quiz(string $username, string $quizname): void {
+        global $DB;
+
+        $user = $DB->get_record('user', ['username' => $username], 'id', MUST_EXIST);
+        $quiz = $DB->get_record('quiz', ['name' => $quizname], 'id', MUST_EXIST);
+
+        $DB->insert_record('quiz_overrides', (object) [
+            'quiz' => $quiz->id,
+            'userid' => $user->id,
+            'attempts' => 5,
+        ]);
+    }
 }

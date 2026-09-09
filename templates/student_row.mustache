@@ -23,6 +23,10 @@
         "actionsmenulabel": "Actions",
         "notelabel": "Add note",
         "hasnote": false,
+        "hasuseroverride": false,
+        "useroverrideflaglabel": "This student has a quiz extension (user override)",
+        "hasusertimeoverride": false,
+        "usertimeoverrideflaglabel": "This student has a time-related override (open/close time or time limit)",
         "canextend": true,
         "extendrowlabel": "Extend time",
         "extendactionenabled": true,
@@ -38,7 +42,13 @@
     <td>
         <span class="badge {{statusclass}}">{{statuslabel}}</span>
     </td>
-    <td>{{fullname}}</td>
+    <td data-field="fullname">{{fullname}}
+        {{#hasuseroverride}}
+        <i class="fa-solid fa-user-gear livequizmonitor-override-flag"
+           title="{{useroverrideflaglabel}}"
+           aria-label="{{useroverrideflaglabel}}"></i>
+        {{/hasuseroverride}}
+    </td>
     {{#showemailcolumn}}
     <td>{{email}}</td>
     {{/showemailcolumn}}
@@ -54,13 +64,18 @@
             {{/progresstext}}
         </div>
     </td>
-    <td>
+    <td data-field="timeremaining">
         {{#hastimer}}
         <span class="livequizmonitor-timer" data-field="timer" data-timeremaining="{{timeremaining}}">{{timeremainingdisplay}}</span>
         {{/hastimer}}
         {{^hastimer}}
         <span class="livequizmonitor-timer" data-field="timer">—</span>
         {{/hastimer}}
+        {{#hasusertimeoverride}}
+        <i class="fa-solid fa-clock livequizmonitor-override-flag livequizmonitor-override-flag-timer"
+           title="{{usertimeoverrideflaglabel}}"
+           aria-label="{{usertimeoverrideflaglabel}}"></i>
+        {{/hasusertimeoverride}}
     </td>
     {{#showactionscolumn}}
     <td class="livequizmonitor-actions" data-field="actions">

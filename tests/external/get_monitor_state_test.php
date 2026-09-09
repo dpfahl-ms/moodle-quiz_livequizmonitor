@@ -123,6 +123,74 @@ final class get_monitor_state_test extends advanced_testcase {
     }
 
     /**
+     * Poll payload includes hasuseroverride, canviewoverrides, and useroverridecount.
+     */
+    public function test_execute_includes_user_override_info(): void {
+        global $DB;
+
+        $this->resetAfterTest();
+
+        $generator = $this->getDataGenerator();
+        $course = $generator->create_course();
+        $teacher = $generator->create_user();
+        $student = $generator->create_user();
+        $generator->enrol_user($teacher->id, $course->id, 'editingteacher');
+        $generator->enrol_user($student->id, $course->id, 'student');
+
+        $quizgenerator = $generator->get_plugin_generator('mod_quiz');
+        $quiz = $quizgenerator->create_instance(['course' => $course->id]);
+        $cm = get_coursemodule_from_instance('quiz', $quiz->id, $course->id, false, MUST_EXIST);
+
+        $DB->insert_record('quiz_overrides', (object) [
+            'quiz' => $quiz->id,
+            'userid' => $student->id,
+            'timelimit' => 1800,
+        ]);
+
+        $this->setUser($teacher);
+        $result = get_monitor_state::execute($cm->id, 0);
+
+        $this->assertTrue($result['canviewoverrides']);
+        $this->assertSame(1, $result['useroverridecount']);
+        $this->assertArrayHasKey('hasuseroverride', $result['students'][0]);
+        $this->assertTrue($result['students'][0]['hasuseroverride']);
+    }
+
+    /**
+     * Poll payload distinguishes time-related overrides via hasusertimeoverride.
+     */
+    public function test_execute_includes_time_related_override_flag(): void {
+        global $DB;
+
+        $this->resetAfterTest();
+
+        $generator = $this->getDataGenerator();
+        $course = $generator->create_course();
+        $teacher = $generator->create_user();
+        $student = $generator->create_user();
+        $generator->enrol_user($teacher->id, $course->id, 'editingteacher');
+        $generator->enrol_user($student->id, $course->id, 'student');
+
+        $quizgenerator = $generator->get_plugin_generator('mod_quiz');
+        $quiz = $quizgenerator->create_instance(['course' => $course->id]);
+        $cm = get_coursemodule_from_instance('quiz', $quiz->id, $course->id, false, MUST_EXIST);
+
+        // Attempts-only override: hasuseroverride true, hasusertimeoverride false.
+        $DB->insert_record('quiz_overrides', (object) [
+            'quiz' => $quiz->id,
+            'userid' => $student->id,
+            'attempts' => 3,
+        ]);
+
+        $this->setUser($teacher);
+        $result = get_monitor_state::execute($cm->id, 0);
+
+        $this->assertArrayHasKey('hasusertimeoverride', $result['students'][0]);
+        $this->assertTrue($result['students'][0]['hasuseroverride']);
+        $this->assertFalse($result['students'][0]['hasusertimeoverride']);
+    }
+
+    /**
      * Student without report capability cannot call the external function.
      */
     public function test_execute_requires_capability(): void {

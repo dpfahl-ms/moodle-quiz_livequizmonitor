@@ -13,7 +13,11 @@
                 {"status": "notstarted", "label": "Not started", "count": 2, "active": false},
                 {"status": "inprogress", "label": "In progress", "count": 1, "active": true},
                 {"status": "completed", "label": "Completed", "count": 0, "active": false}
-            ]
+            ],
+            "canviewoverrides": true,
+            "useroverridelabel": "Has extension",
+            "useroverridecount": 1,
+            "useroverrideactive": false
         }
     }
 }}
@@ -35,6 +39,15 @@
                 {{label}} (<span data-filter-count="{{status}}">{{count}}</span>)
             </button>
         {{/filter.chips}}
+        {{#filter.canviewoverrides}}
+            <button type="button"
+                    class="btn{{#filter.useroverrideactive}} btn-primary{{/filter.useroverrideactive}}{{^filter.useroverrideactive}} btn-outline-secondary{{/filter.useroverrideactive}}"
+                    data-action="filter-flag"
+                    data-flag="useroverride"
+                    aria-pressed="{{#filter.useroverrideactive}}true{{/filter.useroverrideactive}}{{^filter.useroverrideactive}}false{{/filter.useroverrideactive}}">
+                {{filter.useroverridelabel}} (<span data-filter-count="useroverride">{{filter.useroverridecount}}</span>)
+            </button>
+        {{/filter.canviewoverrides}}
         <button type="button" class="btn btn-outline-secondary" data-action="clear-filters">
             {{filter.clearlabel}}
         </button>

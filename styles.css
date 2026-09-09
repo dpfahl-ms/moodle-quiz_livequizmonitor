@@ -200,6 +200,16 @@
     color: rgb(255, 59, 59);
 }
 
+.livequizmonitor-override-flag {
+    color: rgb(59, 59, 255);
+    margin-left: 0.35rem;
+}
+
+.livequizmonitor-override-flag-timer {
+    color: rgb(59, 59, 255);
+    font-size: 0.85em;
+}
+
 .livequizmonitor-row-actions .dropdown-item .fa-unlock {
     margin-right: 0.5rem;
 }
