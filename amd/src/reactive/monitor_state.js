@@ -24,6 +24,17 @@
 import {Reactive} from 'core/reactive';
 
 /**
+ * Groups of meta.filters flags that behave like a single-select within the
+ * group (activating one deactivates the others), even though flags remain
+ * independent of, and combine with AND against, the status filter.
+ *
+ * @type {string[][]}
+ */
+const MUTUALLY_EXCLUSIVE_FLAG_GROUPS = [
+    ['useroverride', 'groupoverride'],
+];
+
+/**
  * Empty summary bucket defaults.
  *
  * @returns {object}
@@ -195,6 +206,10 @@ class MonitorMutations {
      * Toggle a boolean flag filter (e.g. "useroverride"). Independent of
      * the status filter - flags and status can both be active at once.
      *
+     * Flags in the same MUTUALLY_EXCLUSIVE_FLAG_GROUPS entry behave like a
+     * single-select amongst themselves: activating one deactivates the
+     * others in its group.
+     *
      * @param {StateManager} stateManager
      * @param {string} flag Flag key in meta.filters (e.g. "useroverride")
      */
@@ -204,7 +219,20 @@ class MonitorMutations {
         }
         stateManager.setReadOnly(false);
         const current = stateManager.state.meta.filters[flag];
-        stateManager.state.meta.filters[flag] = !current;
+        const next = !current;
+        stateManager.state.meta.filters[flag] = next;
+
+        if (next) {
+            const group = MUTUALLY_EXCLUSIVE_FLAG_GROUPS.find((candidate) => candidate.includes(flag));
+            if (group) {
+                group.forEach((otherFlag) => {
+                    if (otherFlag !== flag) {
+                        stateManager.state.meta.filters[otherFlag] = false;
+                    }
+                });
+            }
+        }
+
         stateManager.setReadOnly(true);
     }
 

@@ -119,9 +119,12 @@ class monitor_renderer extends plugin_renderer_base {
         $summary = $state->summary;
 
         return [
+            'filterslabel' => get_string('filter:filterslabel', 'quiz_livequizmonitor'),
+            'labelsep' => get_string('labelsep', 'langconfig'),
+            'resetalllabel' => get_string('filter:resetall', 'quiz_livequizmonitor'),
+            'namelabel' => get_string('filter:namelabel', 'quiz_livequizmonitor'),
             'searchplaceholder' => get_string('filter:searchplaceholder', 'quiz_livequizmonitor'),
-            'clearlabel' => get_string('filter:clear', 'quiz_livequizmonitor'),
-            'chipsgrouplabel' => get_string('filter:toolbarlabel', 'quiz_livequizmonitor'),
+            'statuslabel' => get_string('filter:statuslabel', 'quiz_livequizmonitor'),
             'chips' => [
                 [
                     'status' => 'all',
@@ -149,6 +152,7 @@ class monitor_renderer extends plugin_renderer_base {
                 ],
             ],
             'canviewoverrides' => !empty($state->canviewoverrides),
+            'overridesgrouplabel' => get_string('filter:overridesgrouplabel', 'quiz_livequizmonitor'),
             'useroverridelabel' => get_string('filter:useroverride', 'quiz_livequizmonitor'),
             'useroverridecount' => $state->useroverridecount ?? 0,
             'useroverrideactive' => false,

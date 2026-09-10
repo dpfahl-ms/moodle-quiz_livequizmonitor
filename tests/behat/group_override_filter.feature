@@ -63,7 +63,7 @@ Feature: Filter by group override in live quiz monitor
 
     When I click on "With group override (2)" "button"
     And I should not see "Student TWO" in the "[data-region='student-table']" "css_element"
-    And I click on "Clear filters" "button"
+    And I click on "Reset all filters" "button"
 
     Then I should see "Student TWO" in the "[data-region='student-table']" "css_element"
     And "With group override (2)" "button" should exist
@@ -96,3 +96,26 @@ Feature: Filter by group override in live quiz monitor
     Then "[data-field='timeremaining'] .livequizmonitor-override-flag-timer" "css_element" should exist in the "Student ONE" "table_row"
     And "[data-field='timeremaining'] .livequizmonitor-override-flag-timer" "css_element" should exist in the "Student THREE" "table_row"
     And "[data-field='timeremaining'] .livequizmonitor-override-flag-timer" "css_element" should not exist in the "Student TWO" "table_row"
+
+  @javascript
+  Scenario: The user-override and group-override toggles are mutually exclusive with each other
+    Given user "student2" has an attempts override on quiz "Quiz 1"
+    And I log in as "teacher1"
+    And I am on the live monitor report for "Quiz 1"
+
+    When I click on "With user override (1)" "button"
+    Then "With user override (1)" "button" should be visible
+    And the "aria-pressed" attribute of "With user override (1)" "button" should contain "true"
+    And the "aria-pressed" attribute of "With group override (2)" "button" should contain "false"
+
+    # Clicking the group-override button cancels the user-override one, not adds to it.
+    When I click on "With group override (2)" "button"
+    Then the "aria-pressed" attribute of "With group override (2)" "button" should contain "true"
+    And the "aria-pressed" attribute of "With user override (1)" "button" should contain "false"
+    And I should see "Student ONE" in the "[data-region='student-table']" "css_element"
+    And I should not see "Student TWO" in the "[data-region='student-table']" "css_element"
+
+    # They do NOT cancel the status chips, which remain an independent (AND) dimension.
+    When I click on "In progress" "button"
+    Then the "aria-pressed" attribute of "In progress" "button" should contain "true"
+    And the "aria-pressed" attribute of "With group override (2)" "button" should contain "true"
