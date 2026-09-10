@@ -35,35 +35,38 @@
 <table class="visually-hidden" aria-hidden="true"><tbody>
 {{/_mustache_lint_wrapper}}
 <tr data-userid="{{userid}}">
-    <td>
+    <td data-column="status">
         <span class="badge {{statusclass}}">{{statuslabel}}</span>
     </td>
-    <td>{{fullname}}</td>
+    <td data-column="student"><span data-colcontent="student">{{fullname}}</span></td>
     {{#showemailcolumn}}
-    <td>{{email}}</td>
+    <td data-column="email"><span data-colcontent="email">{{email}}</span></td>
     {{/showemailcolumn}}
-    <td data-field="progress">
-        <div class="livequizmonitor-progress">
-            <div class="progress" role="progressbar"
-                 aria-valuenow="{{progresspercent}}" aria-valuemin="0" aria-valuemax="100"
-                 aria-label="{{progresstext}}">
-                <div class="progress-bar {{progressbarclass}}" style="width: {{progresspercent}}%"></div>
+    <td data-column="progress" data-field="progress">
+        <div data-colcontent="progress">
+            <div class="livequizmonitor-progress">
+                <div class="progress" role="progressbar"
+                     aria-valuenow="{{progresspercent}}" aria-valuemin="0" aria-valuemax="100"
+                     aria-label="{{progresstext}}">
+                    <div class="progress-bar {{progressbarclass}}" style="width: {{progresspercent}}%"></div>
+                </div>
+                {{#progresstext}}
+                <small class="livequizmonitor-progress-label text-muted">{{progresstext}}</small>
+                {{/progresstext}}
             </div>
-            {{#progresstext}}
-            <small class="livequizmonitor-progress-label text-muted">{{progresstext}}</small>
-            {{/progresstext}}
         </div>
     </td>
-    <td>
+    <td data-column="timeremaining">
         {{#hastimer}}
-        <span class="livequizmonitor-timer" data-field="timer" data-timeremaining="{{timeremaining}}">{{timeremainingdisplay}}</span>
+        <span class="livequizmonitor-timer" data-field="timer" data-colcontent="timeremaining"
+              data-timeremaining="{{timeremaining}}">{{timeremainingdisplay}}</span>
         {{/hastimer}}
         {{^hastimer}}
-        <span class="livequizmonitor-timer" data-field="timer">—</span>
+        <span class="livequizmonitor-timer" data-field="timer" data-colcontent="timeremaining">—</span>
         {{/hastimer}}
     </td>
     {{#showactionscolumn}}
-    <td class="livequizmonitor-actions" data-field="actions">
+    <td class="livequizmonitor-actions" data-column="actions" data-field="actions">
         <div class="livequizmonitor-actions-inner">
             {{> quiz_livequizmonitor/row_action_menu }}
             {{#isblocked}}

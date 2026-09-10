@@ -203,3 +203,42 @@
 .livequizmonitor-row-actions .dropdown-item .fa-unlock {
     margin-right: 0.5rem;
 }
+
+/* Hide/show columns. */
+
+.livequizmonitor-th {
+    white-space: nowrap;
+}
+
+.livequizmonitor-col-toggle {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 1.25rem;
+    height: 1.25rem;
+    margin-left: 0.35rem;
+    padding: 0;
+    border: 0;
+    background: transparent;
+    color: var(--bs-secondary-color, #6c757d);
+    font-size: 0.75rem;
+    line-height: 1;
+    vertical-align: middle;
+    cursor: pointer;
+}
+
+.livequizmonitor-col-toggle:hover,
+.livequizmonitor-col-toggle:focus-visible {
+    color: var(--bs-body-color, #212529);
+}
+
+/* Collapsed header: label hidden (via the generic [data-colcontent] rule
+   below), only the toggle (now showing "+") remains, so the column narrows
+   to a thin strip that still offers a way back. */
+.livequizmonitor-th-collapsed .livequizmonitor-col-toggle {
+    margin-left: 0;
+}
+
+[data-colcontent].livequizmonitor-col-hidden {
+    display: none;
+}

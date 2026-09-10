@@ -29,17 +29,20 @@ use core_privacy\local\request\approved_contextlist;
 use core_privacy\local\request\approved_userlist;
 use core_privacy\local\request\contextlist;
 use core_privacy\local\request\transform;
+use core_privacy\local\request\user_preference_provider;
 use core_privacy\local\request\userlist;
 use core_privacy\local\request\writer;
+use quiz_livequizmonitor\local\column_helper;
 use stdClass;
 
 /**
- * Privacy provider for student supervision notes.
+ * Privacy provider for student supervision notes and the hide/show column preference.
  */
 class provider implements
     \core_privacy\local\metadata\provider,
     \core_privacy\local\request\core_userlist_provider,
-    \core_privacy\local\request\plugin\provider {
+    \core_privacy\local\request\plugin\provider,
+    user_preference_provider {
     /**
      * Describe stored personal data.
      *
@@ -54,7 +57,34 @@ class provider implements
             'usermodified' => 'privacy:metadata:notes:usermodified',
         ], 'privacy:metadata:notes');
 
+        $collection->add_user_preference(
+            column_helper::PREFERENCE_NAME,
+            'privacy:metadata:preference:hiddencolumns'
+        );
+
         return $collection;
+    }
+
+    /**
+     * Export the live monitor hide/show column preference for a user.
+     *
+     * @param int $userid User id.
+     */
+    public static function export_user_preferences(int $userid): void {
+        $preference = get_user_preferences(column_helper::PREFERENCE_NAME, null, $userid);
+        if ($preference === null) {
+            return;
+        }
+
+        $hidden = json_decode($preference, true);
+        $summary = implode(', ', is_array($hidden) ? $hidden : []);
+
+        writer::export_user_preference(
+            'quiz_livequizmonitor',
+            column_helper::PREFERENCE_NAME,
+            $preference,
+            get_string('privacy:metadata:preference:hiddencolumns_desc', 'quiz_livequizmonitor', $summary)
+        );
     }
 
     /**

@@ -25,6 +25,7 @@
 namespace quiz_livequizmonitor\output;
 
 use plugin_renderer_base;
+use quiz_livequizmonitor\local\column_helper;
 use quiz_livequizmonitor\local\manager\monitor_manager;
 use stdClass;
 
@@ -62,6 +63,8 @@ class monitor_renderer extends plugin_renderer_base {
             $students[] = $student;
         }
 
+        $tableheaders = $this->export_table_headers();
+
         return [
             'cmid' => $state->cmid,
             'quizname' => $state->quizname,
@@ -88,19 +91,62 @@ class monitor_renderer extends plugin_renderer_base {
             'unblocklabel' => get_string('onesession:unblocklabel', 'quiz_livequizmonitor'),
             'blockedflaglabel' => get_string('onesession:blockedflag', 'quiz_livequizmonitor'),
             'actionsmenulabel' => get_string('actions'),
-            'tableheaders' => [
-                'status' => get_string('table:status', 'quiz_livequizmonitor'),
-                'student' => get_string('table:student', 'quiz_livequizmonitor'),
-                'email' => get_string('table:email', 'quiz_livequizmonitor'),
-                'progress' => get_string('table:progress', 'quiz_livequizmonitor'),
-                'timeremaining' => get_string('table:timeremaining', 'quiz_livequizmonitor'),
-                'actions' => get_string('table:actions', 'quiz_livequizmonitor'),
-            ],
+            'tableheaders' => $tableheaders,
+            'columns' => $this->export_columns($state, $tableheaders),
+            'hiddencolumnsjson' => json_encode(column_helper::get_hidden_columns()),
             'showemailcolumn' => !empty($state->students) && !empty($state->students[0]->showemail),
             'showactionscolumn' => true,
             'filter' => $this->export_filter_context($state),
             'filterempty' => get_string('filter:empty', 'quiz_livequizmonitor'),
         ];
+    }
+
+    /**
+     * Build column header labels from the column registry.
+     *
+     * @return array<string, string> Column id => header label.
+     */
+    protected function export_table_headers(): array {
+        $headers = [];
+        foreach (column_helper::get_columns() as $columnid => $column) {
+            $headers[$columnid] = get_string($column['langkey'], 'quiz_livequizmonitor');
+        }
+        return $headers;
+    }
+
+    /**
+     * Build the ordered, generic column list the header template loops over.
+     *
+     * This is the single thing the template needs to render any number of
+     * columns, in any order, without knowing their ids in advance: each
+     * entry carries its own visibility (showcolumn), lock state, and
+     * hide/show tooltip labels for the +/- toggle button.
+     *
+     * @param stdClass $state Monitor state from monitor_manager.
+     * @param array $tableheaders Column id maps to header label.
+     * @return array List of column context entries, in registry order.
+     */
+    protected function export_columns(stdClass $state, array $tableheaders): array {
+        // Columns whose presence (not visibility) depends on something other
+        // than the registry itself, e.g. a capability or per-quiz setting.
+        // Anything not listed here defaults to always present.
+        $showflags = [
+            'email' => !empty($state->students) && !empty($state->students[0]->showemail),
+        ];
+
+        $columns = [];
+        foreach (column_helper::get_columns() as $columnid => $column) {
+            $label = $tableheaders[$columnid] ?? $columnid;
+            $columns[] = [
+                'id' => $columnid,
+                'label' => $label,
+                'locked' => !empty($column['locked']),
+                'showcolumn' => $showflags[$columnid] ?? true,
+                'hidelabel' => get_string('columns:hidecolumn', 'quiz_livequizmonitor', $label),
+                'showlabel' => get_string('columns:showcolumn', 'quiz_livequizmonitor', $label),
+            ];
+        }
+        return $columns;
     }
 
     /**
