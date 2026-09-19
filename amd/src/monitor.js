@@ -42,6 +42,18 @@ class MonitorComponent extends BaseComponent {
      * @param {object} descriptor Component descriptor
      */
     create(descriptor) {
+        this.initSelectors();
+        this.initPollState();
+
+        const root = descriptor.element ?? this.element;
+        this.initIdsAndFlags(descriptor, root);
+        this.initLabels(root);
+    }
+
+    /**
+     * Cache CSS selectors used throughout the component.
+     */
+    initSelectors() {
         this.selectors = {
             LASTUPDATED: '[data-region="last-updated"]',
             STALE: '[data-region="stale-indicator"]',
@@ -65,25 +77,47 @@ class MonitorComponent extends BaseComponent {
             SUMMARYTILE: '.livequizmonitor-summary-tile',
             EXTENDBULK: '[data-action="extend-bulk"]',
         };
+    }
+
+    /**
+     * Initialise polling/sync state flags.
+     */
+    initPollState() {
         this.pollTimer = null;
         this.tickTimer = null;
         this.pollInFlight = false;
         this.syncInFlight = false;
         this.syncQueued = false;
         this.hasReceivedPoll = false;
-        const root = descriptor.element ?? this.element;
+    }
+
+    /**
+     * Read ids and boolean capability/visibility flags from the descriptor and dataset.
+     *
+     * @param {object} descriptor Component descriptor
+     * @param {HTMLElement} root Root element
+     */
+    initIdsAndFlags(descriptor, root) {
         this.cmid = parseInt(descriptor.cmid ?? root.dataset.cmid, 10);
         this.groupid = parseInt(descriptor.groupid ?? root.dataset.groupid ?? 0, 10);
         this.showEmailColumn = root.dataset.showEmail === '1';
         this.showActionsColumn = root.dataset.showActions === '1';
         this.lastUpdatedPrefix = root.dataset.lastupdatedPrefix ?? '';
+        this.canextend = root.dataset.canextend === '1';
+        this.onesessionactive = root.dataset.onesessionActive === '1';
+        this.canunblock = root.dataset.canunblock === '1';
+    }
+
+    /**
+     * Read display label strings from the dataset.
+     *
+     * @param {HTMLElement} root Root element
+     */
+    initLabels(root) {
         this.extendRowLabel = root.dataset.extendRowLabel ?? 'Extend time';
         this.noteAddLabel = root.dataset.notesAddLabel ?? 'Add note';
         this.noteEditLabel = root.dataset.notesEditLabel ?? 'Edit note';
         this.actionsMenuLabel = root.dataset.actionsMenuLabel ?? 'Actions';
-        this.canextend = root.dataset.canextend === '1';
-        this.onesessionactive = root.dataset.onesessionActive === '1';
-        this.canunblock = root.dataset.canunblock === '1';
         this.unblockRowLabel = root.dataset.unblockLabel ?? 'Unblock user';
         this.blockedFlagLabel = root.dataset.blockedFlagLabel ?? 'Blocked';
         this.userOverrideFlagLabel = root.dataset.useroverrideFlagLabel ?? 'Has extension';

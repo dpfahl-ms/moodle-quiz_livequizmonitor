@@ -144,30 +144,20 @@ class monitor_manager {
         $groupoverridecount = 0;
         $canviewoverrides = overrides_manager::user_can_view_overrides($context);
         if ($canviewoverrides) {
-            $hasoverridemap = overrides_manager::get_user_override_map((int) $quiz->id, $userids);
-            $hastimeoverridemap = overrides_manager::get_user_time_override_map((int) $quiz->id, $userids);
-            $hasgroupoverridemap = overrides_manager::get_student_group_override_map(
+            $overridemap = overrides_manager::get_override_map(
+                (int) $quiz->course,
                 (int) $quiz->id,
-                (int) $course->id,
-                $userids
-            );
-            $hasgrouptimeoverridemap = overrides_manager::get_student_group_time_override_map(
-                (int) $quiz->id,
-                (int) $course->id,
                 $userids
             );
             foreach ($rows as $row) {
-                $row->hasuseroverride = !empty($hasoverridemap[$row->userid]);
-                $row->hasusertimeoverride = !empty($hastimeoverridemap[$row->userid]);
-
-                // A user override always takes precedence over group overrides in core, so a
-                // student who has one is not counted as having a (relevant) group override here.
-                $row->hasgroupoverride = !$row->hasuseroverride && !empty($hasgroupoverridemap[$row->userid]);
-                $row->hasgrouptimeoverride = !$row->hasuseroverride && !empty($hasgrouptimeoverridemap[$row->userid]);
-
-                // Combined flag used to trigger the (single, generic) timer-column badge.
-                $row->hastimeoverride = $row->hasusertimeoverride || $row->hasgrouptimeoverride;
-
+                // Set boolean flags for this row.
+                $flags = $overridemap[$row->userid] ?? null;
+                $row->hasuseroverride = $flags->hasuseroverride ?? false;
+                $row->hasgroupoverride = $flags->hasgroupoverride ?? false;
+                $row->hastimeoverride = $flags->hastimeoverride ?? false;
+                $row->hasusertimeoverride = $row->hasuseroverride && $row->hastimeoverride;
+                $row->hasgrouptimeoverride = $row->hasgroupoverride && $row->hastimeoverride;
+                // Update override counts, if necessary.
                 if ($row->hasuseroverride) {
                     $useroverridecount++;
                 }

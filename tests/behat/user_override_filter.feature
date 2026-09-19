@@ -62,10 +62,11 @@ Feature: Filter by user override in live quiz monitor
     And "With user override (1)" "button" should exist
 
   @javascript
-  Scenario: Student without manageoverrides capability does not see the filter
+  Scenario: Teacher without manageoverrides or viewoverrides capability does not see the filter
     Given the following "permission overrides" exist:
       | capability                | permission | role           | contextlevel | reference |
       | mod/quiz:manageoverrides  | Prevent    | editingteacher | Course       | C1        |
+      | mod/quiz:viewoverrides    | Prevent    | editingteacher | Course       | C1        |
     And I log in as "teacher1"
     And I am on the live monitor report for "Quiz 1"
 
