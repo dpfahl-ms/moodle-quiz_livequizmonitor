@@ -27,12 +27,14 @@ namespace quiz_livequizmonitor\external;
 defined('MOODLE_INTERNAL') || die();
 
 require_once(__DIR__ . '/../traits/group_scope_test_trait.php');
+require_once(__DIR__ . '/../traits/quiz_attempt_activity_trait.php');
 
 use advanced_testcase;
 use invalid_parameter_exception;
 use moodle_exception;
 use quiz_livequizmonitor\local\manager\extend_time_manager;
 use quiz_livequizmonitor\tests\traits\group_scope_test_trait;
+use quiz_livequizmonitor\tests\traits\quiz_attempt_activity_trait;
 use required_capability_exception;
 
 /**
@@ -43,6 +45,7 @@ use required_capability_exception;
  */
 final class extend_quiz_time_test extends advanced_testcase {
     use group_scope_test_trait;
+    use quiz_attempt_activity_trait;
 
     /**
      * Create a timed quiz with one question.
@@ -78,10 +81,8 @@ final class extend_quiz_time_test extends advanced_testcase {
 
         $generator = $this->getDataGenerator();
         $course = $generator->create_course();
-        $teacher = $generator->create_user();
-        $student = $generator->create_user();
-        $generator->enrol_user($teacher->id, $course->id, 'editingteacher');
-        $generator->enrol_user($student->id, $course->id, 'student');
+        $teacher = $generator->create_and_enrol($course, 'editingteacher');
+        $student = $generator->create_and_enrol($course, 'student');
 
         [$quiz, $cm, $quizgenerator] = $this->create_timed_quiz($course);
 
@@ -104,10 +105,8 @@ final class extend_quiz_time_test extends advanced_testcase {
 
         $generator = $this->getDataGenerator();
         $course = $generator->create_course();
-        $teacher = $generator->create_user();
-        $student = $generator->create_user();
-        $generator->enrol_user($teacher->id, $course->id, 'editingteacher');
-        $generator->enrol_user($student->id, $course->id, 'student');
+        $teacher = $generator->create_and_enrol($course, 'editingteacher');
+        $student = $generator->create_and_enrol($course, 'student');
 
         [$quiz, $cm, $quizgenerator] = $this->create_timed_quiz($course);
 
@@ -129,8 +128,7 @@ final class extend_quiz_time_test extends advanced_testcase {
 
         $generator = $this->getDataGenerator();
         $course = $generator->create_course();
-        $teacher = $generator->create_user();
-        $generator->enrol_user($teacher->id, $course->id, 'editingteacher');
+        $teacher = $generator->create_and_enrol($course, 'editingteacher');
 
         [$quiz, $cm] = $this->create_timed_quiz($course);
 
@@ -148,8 +146,7 @@ final class extend_quiz_time_test extends advanced_testcase {
 
         $generator = $this->getDataGenerator();
         $course = $generator->create_course();
-        $student = $generator->create_user();
-        $generator->enrol_user($student->id, $course->id, 'student');
+        $student = $generator->create_and_enrol($course, 'student');
 
         [$quiz, $cm] = $this->create_timed_quiz($course);
 
@@ -197,5 +194,57 @@ final class extend_quiz_time_test extends advanced_testcase {
             'quiz' => $quiz->id,
             'userid' => $fixture['studentb']->id,
         ]));
+    }
+
+    /**
+     * Bulk-eligible user ids include idle students, not just in-progress ones.
+     */
+    public function test_get_extendable_userids_includes_idle_students(): void {
+        $this->resetAfterTest();
+
+        $generator = $this->getDataGenerator();
+        $course = $generator->create_course();
+        $teacher = $generator->create_and_enrol($course, 'editingteacher');
+        $activeuser = $generator->create_and_enrol($course, 'student');
+        $idleuser = $generator->create_and_enrol($course, 'student');
+
+        [$quiz, $cm, $quizgenerator] = $this->create_timed_quiz($course);
+
+        $this->setUser($activeuser);
+        $quizgenerator->create_attempt($quiz->id, $activeuser->id);
+
+        $this->setUser($idleuser);
+        $idleattempt = $quizgenerator->create_attempt($quiz->id, $idleuser->id);
+        $this->backdate_last_activity($idleattempt->id, 6);
+
+        $this->setUser($teacher);
+        $userids = extend_time_manager::get_extendable_userids($course, $cm, $quiz, 0);
+
+        $this->assertContains((int) $activeuser->id, $userids);
+        $this->assertContains((int) $idleuser->id, $userids);
+    }
+
+    /**
+     * Bulk extend actually extends idle students, not just in-progress ones.
+     */
+    public function test_extend_quiz_time_bulk_extends_idle_student(): void {
+        $this->resetAfterTest();
+
+        $generator = $this->getDataGenerator();
+        $course = $generator->create_course();
+        $teacher = $generator->create_and_enrol($course, 'editingteacher');
+        $idleuser = $generator->create_and_enrol($course, 'student');
+
+        [$quiz, $cm, $quizgenerator] = $this->create_timed_quiz($course);
+
+        $this->setUser($idleuser);
+        $idleattempt = $quizgenerator->create_attempt($quiz->id, $idleuser->id);
+        $this->backdate_last_activity($idleattempt->id, 6);
+
+        $this->setUser($teacher);
+        $outcome = extend_time_manager::extend_quiz_time($course, $cm, $quiz, 0, 10, extend_time_manager::SCOPE_BULK);
+
+        $this->assertSame(1, $outcome->extendedcount);
+        $this->assertContains(\fullname($idleuser), $outcome->usernames);
     }
 }

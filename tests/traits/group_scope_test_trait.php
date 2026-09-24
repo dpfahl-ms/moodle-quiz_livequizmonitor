@@ -80,12 +80,9 @@ trait group_scope_test_trait {
     protected function create_separate_groups_fixture(): array {
         $generator = $this->getDataGenerator();
         $course = $generator->create_course(['groupmode' => SEPARATEGROUPS, 'groupmodeforce' => 1]);
-        $teacher = $generator->create_user();
-        $studenta = $generator->create_user();
-        $studentb = $generator->create_user();
-        $generator->enrol_user($teacher->id, $course->id, 'editingteacher');
-        $generator->enrol_user($studenta->id, $course->id, 'student');
-        $generator->enrol_user($studentb->id, $course->id, 'student');
+        $teacher = $generator->create_and_enrol($course, 'editingteacher');
+        $studenta = $generator->create_and_enrol($course, 'student');
+        $studentb = $generator->create_and_enrol($course, 'student');
 
         $this->prohibit_access_all_groups((int) $course->id);
 

@@ -24,8 +24,13 @@
 
 namespace quiz_livequizmonitor\local\manager;
 
+defined('MOODLE_INTERNAL') || die();
+
+require_once(__DIR__ . '/../../traits/quiz_attempt_activity_trait.php');
+
 use advanced_testcase;
 use mod_quiz\quiz_attempt;
+use quiz_livequizmonitor\tests\traits\quiz_attempt_activity_trait;
 
 /**
  * Tests for monitor_manager status mapping, sorting, and summary.
@@ -33,6 +38,8 @@ use mod_quiz\quiz_attempt;
  * @covers \quiz_livequizmonitor\local\manager\monitor_manager
  */
 final class monitor_manager_test extends advanced_testcase {
+    use quiz_attempt_activity_trait;
+
     /**
      * Create a course quiz with one short-answer question.
      *
@@ -141,8 +148,11 @@ final class monitor_manager_test extends advanced_testcase {
         $course = $generator->create_course();
         [$quiz, $cm, $quizgenerator] = $this->create_quiz_with_question($course);
 
-        $user = $generator->create_user(['firstname' => 'Zero', 'lastname' => 'Submit']);
-        $generator->enrol_user($user->id, $course->id, 'student');
+        $user = $generator->create_and_enrol(
+            $course,
+            'student',
+            ['firstname' => 'Zero', 'lastname' => 'Submit']
+        );
 
         $this->create_quiz_attempt($quizgenerator, $quiz->id, $user->id, quiz_attempt::FINISHED);
 
@@ -166,8 +176,11 @@ final class monitor_manager_test extends advanced_testcase {
         $course = $generator->create_course();
         [$quiz, $cm, $quizgenerator] = $this->create_quiz_with_question($course);
 
-        $user = $generator->create_user(['firstname' => 'Full', 'lastname' => 'Submit']);
-        $generator->enrol_user($user->id, $course->id, 'student');
+        $user = $generator->create_and_enrol(
+            $course,
+            'student',
+            ['firstname' => 'Full', 'lastname' => 'Submit']
+        );
 
         $this->setUser($user);
         $attempt = $quizgenerator->create_attempt($quiz->id, $user->id);
@@ -197,13 +210,21 @@ final class monitor_manager_test extends advanced_testcase {
         $course = $generator->create_course();
         [$quiz, $cm, $quizgenerator] = $this->create_quiz_with_question($course);
 
-        $notstarted = $generator->create_user(['firstname' => 'Diane', 'lastname' => 'Delta']);
-        $inprogress = $generator->create_user(['firstname' => 'Bert', 'lastname' => 'Beta']);
-        $completed = $generator->create_user(['firstname' => 'Adam', 'lastname' => 'Alpha']);
-
-        $generator->enrol_user($notstarted->id, $course->id, 'student');
-        $generator->enrol_user($inprogress->id, $course->id, 'student');
-        $generator->enrol_user($completed->id, $course->id, 'student');
+        $notstarted = $generator->create_and_enrol(
+            $course,
+            'student',
+            ['firstname' => 'Diane', 'lastname' => 'Delta']
+        );
+        $inprogress = $generator->create_and_enrol(
+            $course,
+            'student',
+            ['firstname' => 'Bert', 'lastname' => 'Beta']
+        );
+        $completed = $generator->create_and_enrol(
+            $course,
+            'student',
+            ['firstname' => 'Adam', 'lastname' => 'Alpha']
+        );
 
         $this->create_quiz_attempt($quizgenerator, $quiz->id, $inprogress->id, quiz_attempt::IN_PROGRESS);
         $this->create_quiz_attempt($quizgenerator, $quiz->id, $completed->id, quiz_attempt::FINISHED);
@@ -257,8 +278,11 @@ final class monitor_manager_test extends advanced_testcase {
         $course = $generator->create_course();
         [$quiz, $cm, $quizgenerator] = $this->create_quiz_with_question($course);
 
-        $user = $generator->create_user(['firstname' => 'Sam', 'lastname' => 'Submitted']);
-        $generator->enrol_user($user->id, $course->id, 'student');
+        $user = $generator->create_and_enrol(
+            $course,
+            'student',
+            ['firstname' => 'Sam', 'lastname' => 'Submitted']
+        );
 
         $this->create_quiz_attempt($quizgenerator, $quiz->id, $user->id, monitor_manager::QUIZ_ATTEMPT_SUBMITTED);
 
@@ -277,8 +301,7 @@ final class monitor_manager_test extends advanced_testcase {
         $course = $generator->create_course();
         [$quiz, $cm, $quizgenerator] = $this->create_quiz_with_question($course);
 
-        $user = $generator->create_user();
-        $generator->enrol_user($user->id, $course->id, 'student');
+        $user = $generator->create_and_enrol($course, 'student');
 
         $this->create_quiz_attempt($quizgenerator, $quiz->id, $user->id, quiz_attempt::FINISHED);
         $this->create_quiz_attempt($quizgenerator, $quiz->id, $user->id, quiz_attempt::IN_PROGRESS);
@@ -299,18 +322,21 @@ final class monitor_manager_test extends advanced_testcase {
         [$quiz, $cm, $quizgenerator] = $this->create_quiz_with_question($course);
 
         for ($i = 0; $i < 3; $i++) {
-            $user = $generator->create_user();
-            $generator->enrol_user($user->id, $course->id, 'student');
+            $generator->create_and_enrol($course, 'student');
         }
 
         $state = monitor_manager::get_state($course, $cm, $quiz, 0);
         $summary = $state->summary;
-        $total = $summary->notstarted->count + $summary->inprogress->count + $summary->completed->count;
+        $total = $summary->notstarted->count
+               + $summary->inprogress->count
+               + $summary->idle->count
+               + $summary->completed->count;
 
         $this->assertSame(3, $state->totalstudents);
         $this->assertSame(3, $total);
         $this->assertSame(100, $summary->notstarted->percent);
         $this->assertSame('border-secondary', $summary->notstarted->statusclass);
+        $this->assertSame('border-danger', $summary->idle->statusclass);
         $this->assertSame('border-warning', $summary->inprogress->statusclass);
         $this->assertSame('border-success', $summary->completed->statusclass);
     }
@@ -325,12 +351,9 @@ final class monitor_manager_test extends advanced_testcase {
         $course = $generator->create_course();
         [$quiz, $cm, $quizgenerator] = $this->create_quiz_with_question($course);
 
-        $notstarted = $generator->create_user();
-        $inprogress = $generator->create_user();
-        $completed = $generator->create_user();
-        $generator->enrol_user($notstarted->id, $course->id, 'student');
-        $generator->enrol_user($inprogress->id, $course->id, 'student');
-        $generator->enrol_user($completed->id, $course->id, 'student');
+        $notstarted = $generator->create_and_enrol($course, 'student');
+        $inprogress = $generator->create_and_enrol($course, 'student');
+        $completed = $generator->create_and_enrol($course, 'student');
 
         $this->create_quiz_attempt($quizgenerator, $quiz->id, $inprogress->id, quiz_attempt::IN_PROGRESS);
         $this->create_quiz_attempt($quizgenerator, $quiz->id, $completed->id, quiz_attempt::FINISHED);
@@ -437,10 +460,8 @@ final class monitor_manager_test extends advanced_testcase {
         $course = $generator->create_course();
         [$quiz, $cm] = $this->create_quiz_with_question($course);
 
-        $teacher = $generator->create_user();
-        $student = $generator->create_user(['firstname' => 'Search', 'lastname' => 'Target']);
-        $generator->enrol_user($teacher->id, $course->id, 'editingteacher');
-        $generator->enrol_user($student->id, $course->id, 'student');
+        $teacher = $generator->create_and_enrol($course, 'editingteacher');
+        $student = $generator->create_and_enrol($course, 'student', ['firstname' => 'Search', 'lastname' => 'Target']);
 
         $this->setUser($teacher);
         $state = monitor_manager::get_state($course, $cm, $quiz, 0);
@@ -460,10 +481,8 @@ final class monitor_manager_test extends advanced_testcase {
         $course = $generator->create_course();
         [$quiz, $cm, $quizgenerator] = $this->create_quiz_with_question($course);
 
-        $teacher = $generator->create_user();
-        $student = $generator->create_user();
-        $generator->enrol_user($teacher->id, $course->id, 'editingteacher');
-        $generator->enrol_user($student->id, $course->id, 'student');
+        $teacher = $generator->create_and_enrol($course, 'editingteacher');
+        $student = $generator->create_and_enrol($course, 'student');
 
         $this->setUser($student);
         $quizgenerator->create_attempt($quiz->id, $student->id);
@@ -532,10 +551,8 @@ final class monitor_manager_test extends advanced_testcase {
         $course = $generator->create_course();
         [$quiz, $cm, $quizgenerator] = $this->create_quiz_with_question($course);
 
-        $teacher = $generator->create_user();
-        $student = $generator->create_user();
-        $generator->enrol_user($teacher->id, $course->id, 'editingteacher');
-        $generator->enrol_user($student->id, $course->id, 'student');
+        $teacher = $generator->create_and_enrol($course, 'editingteacher');
+        $student = $generator->create_and_enrol($course, 'student');
 
         $record = $DB->get_record('quizaccess_onesession', ['quizid' => $quiz->id]);
         if ($record) {
@@ -569,5 +586,119 @@ final class monitor_manager_test extends advanced_testcase {
         $this->assertNotNull($blockedrow);
         $this->assertTrue($blockedrow->isblocked);
         $this->assertTrue($blockedrow->unblockactionenabled);
+    }
+
+    /**
+     * A fresh in-progress attempt is not idle.
+     */
+    public function test_get_state_recent_activity_is_inprogress_not_idle(): void {
+        $this->resetAfterTest();
+
+        $generator = $this->getDataGenerator();
+        $course = $generator->create_course();
+        [$quiz, $cm, $quizgenerator] = $this->create_quiz_with_question($course);
+
+        $user = $generator->create_and_enrol(
+            $course,
+            'student',
+            ['firstname' => 'Active', 'lastname' => 'Student']
+        );
+        $this->setUser($user);
+        $quizgenerator->create_attempt($quiz->id, $user->id);
+
+        $this->setAdminUser();
+        $state = monitor_manager::get_state($course, $cm, $quiz, 0);
+
+        $this->assertSame(monitor_manager::STATUS_INPROGRESS, $state->students[0]->status);
+        $this->assertSame(0, $state->summary->idle->count);
+        $this->assertSame(1, $state->summary->inprogress->count);
+    }
+
+    /**
+     * No activity for 5+ minutes maps the row to idle, and the timer/progress
+     * fields are still populated (idle students still have a running attempt).
+     */
+    public function test_get_state_stale_activity_maps_to_idle(): void {
+        global $DB;
+
+        $this->resetAfterTest();
+
+        $generator = $this->getDataGenerator();
+        $course = $generator->create_course();
+        [$quiz, $cm, $quizgenerator] = $this->create_quiz_with_question($course);
+        $DB->set_field('quiz', 'timelimit', 600, ['id' => $quiz->id]);
+        $quiz = $DB->get_record('quiz', ['id' => $quiz->id], '*', MUST_EXIST);
+
+        $user = $generator->create_and_enrol(
+            $course,
+            'student',
+            ['firstname' => 'Idle', 'lastname' => 'Student']
+        );
+        $this->setUser($user);
+        $attempt = $quizgenerator->create_attempt($quiz->id, $user->id);
+        $this->backdate_last_activity($attempt->id, 6);
+
+        $this->setAdminUser();
+        $state = monitor_manager::get_state($course, $cm, $quiz, 0);
+        $row = $state->students[0];
+
+        $this->assertSame(monitor_manager::STATUS_IDLE, $row->status);
+        $this->assertTrue($row->hastimer, 'Idle students should still show a countdown');
+        $this->assertNotNull($row->timeremaining);
+        $this->assertSame(1, $state->summary->idle->count);
+        $this->assertSame(0, $state->summary->inprogress->count);
+    }
+
+    /**
+     * Rows sort in-progress, idle, not-started, then completed;
+     * ties within a status bucket are broken by fullname.
+     */
+    public function test_get_state_sorts_all_statuses_with_fullname_tiebreak(): void {
+        $this->resetAfterTest();
+
+        $generator = $this->getDataGenerator();
+        $course = $generator->create_course();
+        [$quiz, $cm, $quizgenerator] = $this->create_quiz_with_question($course);
+
+        $inprogress = $generator->create_user(['firstname' => 'Ann', 'lastname' => 'Active']);
+        $idle1 = $generator->create_user(['firstname' => 'Cal', 'lastname' => 'Idle']);
+        $idle2 = $generator->create_user(['firstname' => 'Ben', 'lastname' => 'Idle']);
+        $notstarted = $generator->create_user(['firstname' => 'Dee', 'lastname' => 'New']);
+        $completed = $generator->create_user(['firstname' => 'Eve', 'lastname' => 'Done']);
+
+        foreach ([$inprogress, $idle1, $idle2, $notstarted, $completed] as $user) {
+            $generator->enrol_user($user->id, $course->id, 'student');
+        }
+
+        $this->setUser($inprogress);
+        $quizgenerator->create_attempt($quiz->id, $inprogress->id);
+
+        // Deliberately created out of alphabetical order, so that
+        // if sorting fell back to insertion order instead of comparing fullname,
+        // idle1 ("Cal") would wrongly appear before idle2 ("Ben").
+        $this->setUser($idle1);
+        $idle1attempt = $quizgenerator->create_attempt($quiz->id, $idle1->id);
+        $this->backdate_last_activity($idle1attempt->id, 6);
+
+        $this->setUser($idle2);
+        $idle2attempt = $quizgenerator->create_attempt($quiz->id, $idle2->id);
+        $this->backdate_last_activity($idle2attempt->id, 6);
+
+        $this->create_quiz_attempt($quizgenerator, $quiz->id, $completed->id, quiz_attempt::FINISHED);
+
+        // Note that $notstarted never attempts the quiz.
+
+        $this->setAdminUser();
+        $state = monitor_manager::get_state($course, $cm, $quiz, 0);
+
+        $actual = array_map(fn($row) => [$row->status, $row->fullname], $state->students);
+
+        $this->assertSame([
+            [monitor_manager::STATUS_INPROGRESS, fullname($inprogress)],
+            [monitor_manager::STATUS_IDLE, fullname($idle2)], // Ben before Cal.
+            [monitor_manager::STATUS_IDLE, fullname($idle1)],
+            [monitor_manager::STATUS_NOTSTARTED, fullname($notstarted)],
+            [monitor_manager::STATUS_COMPLETED, fullname($completed)],
+        ], $actual);
     }
 }

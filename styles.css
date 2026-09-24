@@ -65,6 +65,7 @@
 }
 
 .livequizmonitor-table .badge {
+    line-height: inherit;
     min-width: 6rem;
 }
 
