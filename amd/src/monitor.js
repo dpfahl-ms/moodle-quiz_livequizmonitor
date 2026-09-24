@@ -27,6 +27,7 @@ import Templates from 'core/templates';
 import {BaseComponent} from 'core/reactive';
 import {matchesFilters, countVisible} from 'quiz_livequizmonitor/filter_utils';
 import {createMonitorReactive, formatDuration} from 'quiz_livequizmonitor/reactive/monitor_state';
+import {showPasswordModal} from 'quiz_livequizmonitor/show_password_modal';
 import {showExtendModal} from 'quiz_livequizmonitor/extend_time_modal';
 import {showStudentNoteModal} from 'quiz_livequizmonitor/student_note_modal';
 import {showUnblockModal} from 'quiz_livequizmonitor/unblock_confirm_modal';
@@ -63,6 +64,7 @@ class MonitorComponent extends BaseComponent {
             EMPTYCOHORT: '[data-region="empty-cohort"]',
             SUMMARYTILE: '.livequizmonitor-summary-tile',
             EXTENDBULK: '[data-action="extend-bulk"]',
+            SHOWPASSWORD: '[data-action="show-password"]',
         };
         this.pollTimer = null;
         this.tickTimer = null;
@@ -175,6 +177,13 @@ class MonitorComponent extends BaseComponent {
             return;
         }
 
+        const passwordBtn = event.target.closest(this.selectors.SHOWPASSWORD);
+        if (passwordBtn && this.element.contains(passwordBtn)) {
+            event.preventDefault();
+            this.openShowPasswordModal();
+            return;
+        }
+
         const bulkBtn = event.target.closest(this.selectors.EXTENDBULK);
         if (bulkBtn && this.element.contains(bulkBtn)) {
             event.preventDefault();
@@ -234,6 +243,16 @@ class MonitorComponent extends BaseComponent {
         }
 
         this.poll();
+    }
+
+    /**
+     * Open show-password modal and refresh on success.
+     */
+    async openShowPasswordModal() {
+        const state = this.getState();
+        await showPasswordModal({
+            quizpassword: state.meta.quizpassword ?? ''
+        });
     }
 
     /**

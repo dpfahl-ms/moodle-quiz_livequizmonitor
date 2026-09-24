@@ -168,6 +168,7 @@ class monitor_manager {
             'quizid' => (int) $quiz->id,
             'cmid' => (int) $cm->id,
             'quizname' => format_string($quiz->name, true, ['context' => $context]),
+            'quizpassword' => $quiz->password,
             'updatedat' => $now,
             'totalstudents' => count($students),
             'summary' => $summary,

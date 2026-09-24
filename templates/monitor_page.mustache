@@ -75,6 +75,13 @@
             </div>
         </div>
         <div class="livequizmonitor-header-actions d-flex align-items-center gap-2">
+            {{#quizpassword}}
+            <button type="button"
+                    class="btn btn-dark"
+                    data-action="show-password">
+                {{showpasswordlabel}}
+            </button>
+            {{/quizpassword}}
             {{#canextend}}
             <button type="button"
                     class="btn btn-primary"
