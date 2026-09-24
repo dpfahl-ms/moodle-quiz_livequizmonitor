@@ -16,6 +16,18 @@
             "timeremaining": "Time remaining",
             "actions": "Actions"
         },
+        "columns": [
+            {"id": "status", "label": "Status", "locked": true, "showcolumn": true},
+            {"id": "student", "label": "Student", "locked": false, "showcolumn": true,
+            "hidelabel": "Hide Student column", "showlabel": "Show Student column"},
+            {"id": "email", "label": "Email", "locked": false, "showcolumn": true,
+            "hidelabel": "Hide Email column", "showlabel": "Show Email column"},
+            {"id": "progress", "label": "Progress", "locked": false, "showcolumn": true,
+            "hidelabel": "Hide Progress column", "showlabel": "Show Progress column"},
+            {"id": "timeremaining", "label": "Time remaining", "locked": false, "showcolumn": true,
+            "hidelabel": "Hide Time remaining column", "showlabel": "Show Time remaining column"},
+            {"id": "actions", "label": "Actions", "locked": true, "showcolumn": true}
+        ],
         "students": []
     }
 }}
@@ -26,16 +38,27 @@
     <table class="table table-striped generaltable livequizmonitor-table">
         <thead>
             <tr>
-                <th>{{tableheaders.status}}</th>
-                <th>{{tableheaders.student}}</th>
-                {{#showemailcolumn}}
-                <th>{{tableheaders.email}}</th>
-                {{/showemailcolumn}}
-                <th>{{tableheaders.progress}}</th>
-                <th>{{tableheaders.timeremaining}}</th>
-                {{#showactionscolumn}}
-                <th>{{tableheaders.actions}}</th>
-                {{/showactionscolumn}}
+                {{#columns}}
+                {{#showcolumn}}
+                <th data-column="{{id}}" class="livequizmonitor-th {{^locked}}livequizmonitor-th-toggleable{{/locked}}">
+                    <span class="livequizmonitor-th-label" data-colcontent="{{id}}">{{label}}</span>
+                    {{^locked}}
+                    <button type="button"
+                            class="livequizmonitor-col-toggle"
+                            data-action="toggle-column"
+                            data-column="{{id}}"
+                            data-hidelabel="{{hidelabel}}"
+                            data-showlabel="{{showlabel}}"
+                            aria-pressed="true"
+                            aria-expanded="true"
+                            title="{{hidelabel}}">
+                        <i class="fa-solid fa-minus" aria-hidden="true"></i>
+                        <span class="sr-only">{{hidelabel}}</span>
+                    </button>
+                    {{/locked}}
+                </th>
+                {{/showcolumn}}
+                {{/columns}}
             </tr>
         </thead>
         <tbody>
