@@ -570,4 +570,97 @@ final class monitor_manager_test extends advanced_testcase {
         $this->assertTrue($blockedrow->isblocked);
         $this->assertTrue($blockedrow->unblockactionenabled);
     }
+
+    /**
+     * get_state() marks students with a user override and reports the count,
+     * but only when the viewer has mod/quiz:manageoverrides.
+     */
+    public function test_get_state_flags_user_overrides(): void {
+        global $DB;
+
+        $this->resetAfterTest();
+
+        $generator = $this->getDataGenerator();
+        $course = $generator->create_course();
+        [$quiz, $cm] = $this->create_quiz_with_question($course);
+
+        $extended = $generator->create_user(['firstname' => 'Has', 'lastname' => 'Extension']);
+        $plain = $generator->create_user(['firstname' => 'No', 'lastname' => 'Extension']);
+        $generator->enrol_user($extended->id, $course->id, 'student');
+        $generator->enrol_user($plain->id, $course->id, 'student');
+
+        $DB->insert_record('quiz_overrides', (object) [
+            'quiz' => $quiz->id,
+            'userid' => $extended->id,
+            'timelimit' => 1800,
+        ]);
+
+        // A student viewer (no mod/quiz:manageoverrides) sees no override info.
+        $this->setUser($extended);
+        $studentview = monitor_manager::get_state($course, $cm, $quiz, 0);
+        $this->assertFalse($studentview->canviewoverrides);
+        $this->assertSame(0, $studentview->useroverridecount);
+        foreach ($studentview->students as $row) {
+            $this->assertFalse($row->hasuseroverride);
+        }
+
+        // A teacher/admin viewer sees override info.
+        $this->setAdminUser();
+        $state = monitor_manager::get_state($course, $cm, $quiz, 0);
+        $this->assertTrue($state->canviewoverrides);
+        $this->assertSame(1, $state->useroverridecount);
+
+        $byuserid = [];
+        foreach ($state->students as $row) {
+            $byuserid[$row->userid] = $row;
+        }
+        $this->assertTrue($byuserid[$extended->id]->hasuseroverride);
+        $this->assertFalse($byuserid[$plain->id]->hasuseroverride);
+    }
+
+    /**
+     * hasusertimeoverride is true only for time-related overrides (timeopen/
+     * timeclose/timelimit), not for attempts- or password-only overrides.
+     */
+    public function test_get_state_flags_time_related_overrides_separately(): void {
+        global $DB;
+
+        $this->resetAfterTest();
+
+        $generator = $this->getDataGenerator();
+        $course = $generator->create_course();
+        [$quiz, $cm] = $this->create_quiz_with_question($course);
+
+        $timeextended = $generator->create_user(['firstname' => 'Time', 'lastname' => 'Extended']);
+        $attemptsonly = $generator->create_user(['firstname' => 'Attempts', 'lastname' => 'Only']);
+        $generator->enrol_user($timeextended->id, $course->id, 'student');
+        $generator->enrol_user($attemptsonly->id, $course->id, 'student');
+
+        $DB->insert_record('quiz_overrides', (object) [
+            'quiz' => $quiz->id,
+            'userid' => $timeextended->id,
+            'timelimit' => 1800,
+        ]);
+        $DB->insert_record('quiz_overrides', (object) [
+            'quiz' => $quiz->id,
+            'userid' => $attemptsonly->id,
+            'attempts' => 5,
+        ]);
+
+        $this->setAdminUser();
+        $state = monitor_manager::get_state($course, $cm, $quiz, 0);
+
+        $byuserid = [];
+        foreach ($state->students as $row) {
+            $byuserid[$row->userid] = $row;
+        }
+
+        // Both have SOME override...
+        $this->assertTrue($byuserid[$timeextended->id]->hasuseroverride);
+        $this->assertTrue($byuserid[$attemptsonly->id]->hasuseroverride);
+
+        // ...but only the time-related one is flagged for the timer badge.
+        $this->assertTrue($byuserid[$timeextended->id]->hasusertimeoverride);
+        $this->assertFalse($byuserid[$attemptsonly->id]->hasusertimeoverride);
+    }
 }
