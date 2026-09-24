@@ -24,6 +24,11 @@
 
 defined('MOODLE_INTERNAL') || die();
 
+$string['attempts:errorload'] = 'Fehler beim Laden der Protokolle. Bitte versuchen Sie es erneut.';
+$string['attempts:modaltitle'] = 'Aktuelle Logdaten für {$a}';
+$string['attempts:noattempts'] = 'Für diesen Student wurden keine Logdaten gefunden.';
+$string['attempts:showlabel'] = 'Logs anzeigen';
+$string['attempts:showmore'] = 'Mehr anzeigen';
 $string['emptycohort'] = 'Für dieses Quiz wurden keine berechtigten Teilnehmenden gefunden.';
 $string['error:groupnotvisible'] = 'Sie haben keine Berechtigung, diese Gruppe in diesem Monitor anzuzeigen.';
 $string['error:usernotvisible'] = 'Die ausgewählte Person ist in dieser Monitor-Ansicht nicht sichtbar.';
@@ -92,6 +97,7 @@ $string['staleindicator'] = 'Aktualisierung pausiert — letzte bekannte Daten w
 $string['status:completed'] = 'Abgeschlossen';
 $string['status:inprogress'] = 'In Bearbeitung';
 $string['status:notstarted'] = 'Nicht begonnen';
+$string['strftimerecentaccurate'] = '%d. %b %H:%M:%S';
 $string['summary:completed'] = 'Abgeschlossen';
 $string['summary:inprogress'] = 'In Bearbeitung';
 $string['summary:notstarted'] = 'Nicht begonnen';
@@ -101,4 +107,6 @@ $string['table:progress'] = 'Fortschritt';
 $string['table:status'] = 'Status';
 $string['table:student'] = 'Teilnehmende';
 $string['table:timeremaining'] = 'Verbleibende Zeit';
+$string['timefinish'] = 'Beendet';
+$string['timestart'] = 'Begonnen';
 $string['timeup'] = 'Zeit abgelaufen';

@@ -104,6 +104,8 @@ class get_monitor_state extends external_api {
         $student = new external_single_structure([
             'userid' => new external_value(PARAM_INT, 'User id'),
             'fullname' => new external_value(PARAM_TEXT, 'Full name'),
+            'firstinitial' => new external_value(PARAM_TEXT, 'Initial of first name'),
+            'lastinitial' => new external_value(PARAM_TEXT, 'Initial of last name'),
             'email' => new external_value(PARAM_TEXT, 'Email'),
             'showemail' => new external_value(PARAM_BOOL, 'Show email'),
             'status' => new external_value(PARAM_ALPHA, 'Status'),
@@ -127,8 +129,8 @@ class get_monitor_state extends external_api {
         ]);
 
         return new external_single_structure([
-            'quizid' => new external_value(PARAM_INT, 'Quiz id'),
             'cmid' => new external_value(PARAM_INT, 'CM id'),
+            'quizid' => new external_value(PARAM_INT, 'Quiz id'),
             'quizname' => new external_value(PARAM_TEXT, 'Quiz name'),
             'updatedat' => new external_value(PARAM_INT, 'Updated timestamp'),
             'totalstudents' => new external_value(PARAM_INT, 'Total students'),
@@ -137,6 +139,7 @@ class get_monitor_state extends external_api {
             'inprogresscount' => new external_value(PARAM_INT, 'In-progress student count'),
             'onesessionactive' => new external_value(PARAM_BOOL, 'Onesession rule active for quiz'),
             'canunblock' => new external_value(PARAM_BOOL, 'Viewer may unblock attempts'),
+            'canviewattempts' => new external_value(PARAM_BOOL, 'Viewer may view student attempts'),
             'summary' => new external_single_structure([
                 'notstarted' => $statuscount,
                 'inprogress' => $statuscount,
@@ -158,6 +161,8 @@ class get_monitor_state extends external_api {
             $entry = [
                 'userid' => $row->userid,
                 'fullname' => $row->fullname,
+                'firstinitial' => $row->firstinitial,
+                'lastinitial' => $row->lastinitial,
                 'email' => $row->email,
                 'showemail' => (bool) $row->showemail,
                 'status' => $row->status,
@@ -190,8 +195,8 @@ class get_monitor_state extends external_api {
 
         $summary = $state->summary;
         return [
-            'quizid' => $state->quizid,
             'cmid' => $state->cmid,
+            'quizid' => $state->quizid,
             'quizname' => $state->quizname,
             'updatedat' => $state->updatedat,
             'totalstudents' => $state->totalstudents,
@@ -200,6 +205,7 @@ class get_monitor_state extends external_api {
             'inprogresscount' => (int) ($state->inprogresscount ?? $summary->inprogress->count),
             'onesessionactive' => (bool) ($state->onesessionactive ?? false),
             'canunblock' => (bool) ($state->canunblock ?? false),
+            'canviewattempts' => (bool) ($state->canviewattempts ?? false),
             'summary' => [
                 'notstarted' => (array) $summary->notstarted,
                 'inprogress' => (array) $summary->inprogress,

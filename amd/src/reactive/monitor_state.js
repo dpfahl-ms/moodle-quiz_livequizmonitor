@@ -74,6 +74,7 @@ export const createInitialState = () => ({
         inprogresscount: 0,
         onesessionactive: false,
         canunblock: false,
+        canviewattempts: false,
     },
     summary: emptySummary(),
     students: [],
@@ -120,6 +121,9 @@ class MonitorMutations {
         }
         if (payload.canunblock !== undefined) {
             stateManager.state.meta.canunblock = payload.canunblock;
+        }
+        if (payload.canviewattempts !== undefined) {
+            stateManager.state.meta.canviewattempts = payload.canviewattempts;
         }
 
         // Update summary buckets in place so watchers receive summary.<bucket>:updated events.
