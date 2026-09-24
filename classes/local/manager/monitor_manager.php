@@ -140,6 +140,33 @@ class monitor_manager {
             $row->hasnote = !empty($hasnotemap[$row->userid]);
         }
 
+        $useroverridecount = 0;
+        $groupoverridecount = 0;
+        $canviewoverrides = overrides_manager::user_can_view_overrides($context);
+        if ($canviewoverrides) {
+            $overridemap = overrides_manager::get_override_map(
+                (int) $quiz->course,
+                (int) $quiz->id,
+                $userids
+            );
+            foreach ($rows as $row) {
+                // Set boolean flags for this row.
+                $flags = $overridemap[$row->userid] ?? null;
+                $row->hasuseroverride = $flags->hasuseroverride ?? false;
+                $row->hasgroupoverride = $flags->hasgroupoverride ?? false;
+                $row->hastimeoverride = $flags->hastimeoverride ?? false;
+                $row->hasusertimeoverride = $row->hasuseroverride && $row->hastimeoverride;
+                $row->hasgrouptimeoverride = $row->hasgroupoverride && $row->hastimeoverride;
+                // Update override counts, if necessary.
+                if ($row->hasuseroverride) {
+                    $useroverridecount++;
+                }
+                if ($row->hasgroupoverride) {
+                    $groupoverridecount++;
+                }
+            }
+        }
+
         $onesessionactive = onesession_manager::is_active_for_quiz((int) $quiz->id, $quiz);
         $canunblock = $onesessionactive && onesession_manager::user_can_unblock($context);
 
@@ -177,6 +204,9 @@ class monitor_manager {
             'inprogresscount' => $inprogresscount,
             'onesessionactive' => $onesessionactive,
             'canunblock' => $canunblock,
+            'canviewoverrides' => $canviewoverrides,
+            'useroverridecount' => $useroverridecount,
+            'groupoverridecount' => $groupoverridecount,
         ];
 
         return $state;
@@ -396,6 +426,11 @@ class monitor_manager {
             'attemptendat' => $attemptendat,
             'canextend' => $canextend,
             'hasnote' => false,
+            'hasuseroverride' => false,
+            'hasusertimeoverride' => false,
+            'hasgroupoverride' => false,
+            'hasgrouptimeoverride' => false,
+            'hastimeoverride' => false,
             'isblocked' => false,
             'unblockactionenabled' => false,
         ];
