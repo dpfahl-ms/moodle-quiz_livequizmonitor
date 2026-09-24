@@ -1,0 +1,71 @@
+{{!
+    @template quiz_livequizmonitor/show_logs_modal_body
+
+    Template for rendering student activity logs inside the live monitor modal.
+
+    Classes required for JS:
+    * none
+
+    Data context required for this template:
+    * userid {int} The ID of the student being viewed.
+    * courseid {int} The ID of the course context.
+    * studentname {string} The full display name of the student.
+    * haslogs {bool} True if one or more logs exist for today.
+    * logs {array} List of log records.
+        * id {int} Log record ID.
+        * timecreated {int} Unix timestamp of event creation.
+        * timeformatted {string} Human-readable date/time string.
+        * action {string} Event action type (e.g., viewed, updated).
+        * target {string} Event target entity.
+        * component {string} Moodle component handling the event.
+        * eventname {string} Localized event description name.
+
+    Example context (json):
+    {
+        "userid": 5,
+        "courseid": 2,
+        "studentname": "First.01 LAST.01",
+        "haslogs": true,
+        "logs": [
+            {
+                "id": 101,
+                "timecreated": 1786650000,
+                "timeformatted": "13 Aug 2026, 22:00",
+                "action": "viewed",
+                "target": "course",
+                "component": "core",
+                "eventname": "Course viewed"
+            }
+        ]
+    }
+}}
+<div class="livequizmonitor-show-logs-modal">
+    {{#haslogs}}
+        <div class="table-responsive">
+            <table class="table table-sm table-striped align-middle mb-0">
+                <thead>
+                    <tr>
+                        <th scope="col">{{#str}} time {{/str}}</th>
+                        <th scope="col">{{#str}} eventname {{/str}}</th>
+                        <th scope="col">{{#str}} action {{/str}}</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {{#logs}}
+                        <tr>
+                            <td class="text-nowrap small text-muted">{{timeformatted}}</td>
+                            <td>{{eventname}}</td>
+                            <td><span class="badge bg-light text-dark border">{{action}}</span></td>
+                        </tr>
+                    {{/logs}}
+                </tbody>
+            </table>
+        </div>
+    {{/haslogs}}
+
+    {{^haslogs}}
+        <div class="alert alert-info mb-0" role="alert">
+            {{#str}} logs:nologs, quiz_livequizmonitor {{/str}}
+        </div>
+    {{/haslogs}}
+</div>
