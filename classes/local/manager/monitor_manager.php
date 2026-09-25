@@ -463,16 +463,6 @@ class monitor_manager {
     }
 
     /**
-     * Get the timestamp before which an attempt is considered idle.
-     *
-     * @param int $timenow Current timestamp.
-     * @return int Timestamp of the idle threshold (timenow minus IDLE_THRESHOLD_SECONDS).
-     */
-    protected static function get_idle_timestamp(int $timenow): int {
-        return $timenow - self::IDLE_THRESHOLD_SECONDS;
-    }
-
-    /**
      * Check whether or not the given quiz attempt is idle,
      * where "idle" means "no activity within the last 5 minutes".
      *
@@ -481,7 +471,7 @@ class monitor_manager {
      * @return bool TRUE if the attempt is idle; otherwise FALSE.
      */
     protected static function is_attempt_idle(quiz_attempt $attemptobj, int $timenow): bool {
-        $timestamp = self::get_idle_timestamp($timenow);
+        $timenow - self::IDLE_THRESHOLD_SECONDS;
 
         foreach ($attemptobj->get_slots() as $slot) {
             if ($attemptobj->get_question_action_time($slot) > $timestamp) {
