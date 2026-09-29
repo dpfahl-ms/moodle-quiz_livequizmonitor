@@ -29,6 +29,7 @@ defined('MOODLE_INTERNAL') || die();
 require_once(__DIR__ . '/../traits/group_scope_test_trait.php');
 
 use advanced_testcase;
+use core_external\external_api;
 use moodle_exception;
 use quiz_livequizmonitor\external\get_monitor_state;
 use quiz_livequizmonitor\tests\traits\group_scope_test_trait;
@@ -51,10 +52,8 @@ final class get_monitor_state_test extends advanced_testcase {
 
         $generator = $this->getDataGenerator();
         $course = $generator->create_course();
-        $teacher = $generator->create_user();
-        $student = $generator->create_user();
-        $generator->enrol_user($teacher->id, $course->id, 'editingteacher');
-        $generator->enrol_user($student->id, $course->id, 'student');
+        $student = $generator->create_and_enrol($course, 'student');
+        $teacher = $generator->create_and_enrol($course, 'editingteacher');
 
         $quizgenerator = $generator->get_plugin_generator('mod_quiz');
         $questiongenerator = $generator->get_plugin_generator('core_question');
@@ -99,10 +98,8 @@ final class get_monitor_state_test extends advanced_testcase {
 
         $generator = $this->getDataGenerator();
         $course = $generator->create_course();
-        $teacher = $generator->create_user();
-        $student = $generator->create_user();
-        $generator->enrol_user($teacher->id, $course->id, 'editingteacher');
-        $generator->enrol_user($student->id, $course->id, 'student');
+        $student = $generator->create_and_enrol($course, 'student');
+        $teacher = $generator->create_and_enrol($course, 'editingteacher');
 
         $quizgenerator = $generator->get_plugin_generator('mod_quiz');
         $quiz = $quizgenerator->create_instance(['course' => $course->id]);
@@ -130,8 +127,7 @@ final class get_monitor_state_test extends advanced_testcase {
 
         $generator = $this->getDataGenerator();
         $course = $generator->create_course();
-        $student = $generator->create_user();
-        $generator->enrol_user($student->id, $course->id, 'student');
+        $student = $generator->create_and_enrol($course, 'student');
 
         $quizgenerator = $generator->get_plugin_generator('mod_quiz');
         $quiz = $quizgenerator->create_instance(['course' => $course->id, 'grade' => 100]);
@@ -159,5 +155,29 @@ final class get_monitor_state_test extends advanced_testcase {
             $this->assertSame('error:groupnotvisible', $e->errorcode);
             throw $e;
         }
+    }
+
+    /**
+     * The idle summary bucket survives the external API's structure validation.
+     */
+    public function test_execute_returns_includes_idle_summary_bucket(): void {
+        $this->resetAfterTest();
+
+        $generator = $this->getDataGenerator();
+        $course = $generator->create_course();
+        $teacher = $generator->create_and_enrol($course, 'editingteacher');
+
+        $quizgenerator = $generator->get_plugin_generator('mod_quiz');
+        $cm = get_coursemodule_from_instance(
+            'quiz',
+            $quizgenerator->create_instance(['course' => $course->id])->id
+        );
+
+        $this->setUser($teacher);
+        $result = get_monitor_state::execute($cm->id, 0);
+        $validated = external_api::clean_returnvalue(get_monitor_state::execute_returns(), $result);
+
+        $this->assertArrayHasKey('idle', $validated['summary']);
+        $this->assertSame(0, $validated['summary']['idle']['count']);
     }
 }

@@ -41,10 +41,8 @@ final class student_note_manager_test extends advanced_testcase {
     private function create_quiz_with_student(): array {
         $generator = $this->getDataGenerator();
         $course = $generator->create_course();
-        $teacher = $generator->create_user();
-        $student = $generator->create_user();
-        $generator->enrol_user($teacher->id, $course->id, 'editingteacher');
-        $generator->enrol_user($student->id, $course->id, 'student');
+        $teacher = $generator->create_and_enrol($course, 'editingteacher');
+        $student = $generator->create_and_enrol($course, 'student');
 
         $quiz = $generator->get_plugin_generator('mod_quiz')->create_instance([
             'course' => $course->id,
