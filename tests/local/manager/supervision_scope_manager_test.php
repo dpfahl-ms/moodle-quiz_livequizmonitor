@@ -116,11 +116,9 @@ final class supervision_scope_manager_test extends advanced_testcase {
 
         $generator = $this->getDataGenerator();
         $course = $generator->create_course();
-        $teacher = $generator->create_user();
-        $student = $generator->create_user();
+        $teacher = $generator->create_and_enrol($course, 'editingteacher');
+        $student = $generator->create_and_enrol($course, 'student');
         $outsider = $generator->create_user();
-        $generator->enrol_user($teacher->id, $course->id, 'editingteacher');
-        $generator->enrol_user($student->id, $course->id, 'student');
 
         $quiz = $generator->get_plugin_generator('mod_quiz')->create_instance(['course' => $course->id]);
         $cm = get_coursemodule_from_instance('quiz', $quiz->id, $course->id, false, MUST_EXIST);

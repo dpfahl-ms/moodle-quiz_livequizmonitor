@@ -187,8 +187,7 @@ final class onesession_manager_test extends advanced_testcase {
         $generator = $this->getDataGenerator();
         $course = $generator->create_course();
         [$quiz, $cm, $quizgenerator] = $this->create_quiz_with_question($course);
-        $student = $generator->create_user();
-        $generator->enrol_user($student->id, $course->id, 'student');
+        $student = $generator->create_and_enrol($course, 'student');
 
         $this->setUser($student);
         $attempt = $quizgenerator->create_attempt($quiz->id, $student->id);
@@ -209,8 +208,7 @@ final class onesession_manager_test extends advanced_testcase {
         $generator = $this->getDataGenerator();
         $course = $generator->create_course();
         [$quiz, $cm, $quizgenerator] = $this->create_quiz_with_question($course);
-        $student = $generator->create_user();
-        $generator->enrol_user($student->id, $course->id, 'student');
+        $student = $generator->create_and_enrol($course, 'student');
 
         $this->setUser($student);
         $attempt = $quizgenerator->create_attempt($quiz->id, $student->id);
@@ -262,10 +260,8 @@ final class onesession_manager_test extends advanced_testcase {
 
         $generator = $this->getDataGenerator();
         $course = $generator->create_course();
-        $teacher = $generator->create_user();
-        $student = $generator->create_user();
-        $generator->enrol_user($teacher->id, $course->id, 'editingteacher');
-        $generator->enrol_user($student->id, $course->id, 'student');
+        $teacher = $generator->create_and_enrol($course, 'editingteacher');
+        $student = $generator->create_and_enrol($course, 'student');
 
         [$quiz, $cm, $quizgenerator] = $this->create_quiz_with_question($course);
         $this->enable_onesession_for_quiz((int) $quiz->id);
@@ -299,10 +295,8 @@ final class onesession_manager_test extends advanced_testcase {
 
         $generator = $this->getDataGenerator();
         $course = $generator->create_course();
-        $teacher = $generator->create_user();
-        $student = $generator->create_user();
-        $generator->enrol_user($teacher->id, $course->id, 'editingteacher');
-        $generator->enrol_user($student->id, $course->id, 'student');
+        $teacher = $generator->create_and_enrol($course, 'editingteacher');
+        $student = $generator->create_and_enrol($course, 'student');
 
         [$quiz, $cm, $quizgenerator] = $this->create_quiz_with_question($course);
         $this->enable_onesession_for_quiz((int) $quiz->id);
@@ -330,10 +324,8 @@ final class onesession_manager_test extends advanced_testcase {
 
         $generator = $this->getDataGenerator();
         $course = $generator->create_course();
-        $teacher = $generator->create_user();
-        $student = $generator->create_user();
-        $generator->enrol_user($teacher->id, $course->id, 'editingteacher');
-        $generator->enrol_user($student->id, $course->id, 'student');
+        $teacher = $generator->create_and_enrol($course, 'editingteacher');
+        $student = $generator->create_and_enrol($course, 'student');
 
         [$quiz, $cm, $quizgenerator] = $this->create_quiz_with_question($course);
 

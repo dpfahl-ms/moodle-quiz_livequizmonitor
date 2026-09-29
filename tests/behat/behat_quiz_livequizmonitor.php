@@ -150,4 +150,45 @@ class behat_quiz_livequizmonitor extends behat_base {
         $plugin = enrol_get_plugin('manual');
         $plugin->unenrol_user($instance, $user->id);
     }
+
+    /**
+     * Make the student's current quiz attempt idle by backdating the latest
+     * question attempt step.
+     *
+     * @Given /^the student "(?P<username>[^"]*)" has been idle for (?P<minutes>\d+) minutes on quiz "(?P<quizname>[^"]*)"$/
+     * @param string $username Student username.
+     * @param int $minutes Number of minutes to backdate the activity.
+     * @param string $quizname Quiz activity name.
+     */
+    public function the_student_has_been_idle_for_minutes_on_quiz(
+        string $username,
+        int $minutes,
+        string $quizname
+    ): void {
+        global $DB;
+
+        $user = $DB->get_record('user', ['username' => $username], 'id', MUST_EXIST);
+        $quiz = $DB->get_record('quiz', ['name' => $quizname], 'id', MUST_EXIST);
+
+        $step = $DB->get_record_sql(
+            "SELECT qas.*
+               FROM {question_attempt_steps} qas
+               JOIN {question_attempts} qa ON qa.id = qas.questionattemptid
+               JOIN {question_usages} qu ON qu.id = qa.questionusageid
+               JOIN {quiz_attempts} qza ON qza.uniqueid = qu.id
+              WHERE qza.quiz = :quizid
+                AND qza.userid = :userid
+                AND qza.state = :state
+           ORDER BY qas.timecreated DESC",
+            [
+                'quizid' => $quiz->id,
+                'userid' => $user->id,
+                'state' => \mod_quiz\quiz_attempt::IN_PROGRESS,
+            ],
+            MUST_EXIST
+        );
+
+        $step->timecreated = time() - ($minutes * 60);
+        $DB->update_record('question_attempt_steps', $step);
+    }
 }

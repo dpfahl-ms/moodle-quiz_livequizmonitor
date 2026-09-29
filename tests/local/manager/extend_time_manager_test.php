@@ -68,10 +68,8 @@ final class extend_time_manager_test extends advanced_testcase {
 
         $generator = $this->getDataGenerator();
         $course = $generator->create_course();
-        $teacher = $generator->create_user();
-        $student = $generator->create_user();
-        $generator->enrol_user($teacher->id, $course->id, 'editingteacher');
-        $generator->enrol_user($student->id, $course->id, 'student');
+        $teacher = $generator->create_and_enrol($course, 'editingteacher');
+        $student = $generator->create_and_enrol($course, 'student');
 
         [$quiz, $cm, $quizgenerator] = $this->create_timed_quiz($course);
 
@@ -103,12 +101,9 @@ final class extend_time_manager_test extends advanced_testcase {
 
         $generator = $this->getDataGenerator();
         $course = $generator->create_course();
-        $teacher = $generator->create_user();
-        $inprogress = $generator->create_user();
-        $notstarted = $generator->create_user();
-        $generator->enrol_user($teacher->id, $course->id, 'editingteacher');
-        $generator->enrol_user($inprogress->id, $course->id, 'student');
-        $generator->enrol_user($notstarted->id, $course->id, 'student');
+        $teacher = $generator->create_and_enrol($course, 'editingteacher');
+        $inprogress = $generator->create_and_enrol($course, 'student');
+        $notstarted = $generator->create_and_enrol($course, 'student');
 
         [$quiz, $cm, $quizgenerator] = $this->create_timed_quiz($course);
 
@@ -116,7 +111,7 @@ final class extend_time_manager_test extends advanced_testcase {
         $quizgenerator->create_attempt($quiz->id, $inprogress->id);
 
         $this->setUser($teacher);
-        $userids = extend_time_manager::get_inprogress_user_ids($course, $cm, $quiz, 0);
+        $userids = extend_time_manager::get_extendable_userids($course, $cm, $quiz, 0);
         $this->assertSame([(int) $inprogress->id], $userids);
 
         $outcome = extend_time_manager::extend_quiz_time(
@@ -140,10 +135,8 @@ final class extend_time_manager_test extends advanced_testcase {
 
         $generator = $this->getDataGenerator();
         $course = $generator->create_course();
-        $teacher = $generator->create_user();
-        $student = $generator->create_user();
-        $generator->enrol_user($teacher->id, $course->id, 'editingteacher');
-        $generator->enrol_user($student->id, $course->id, 'student');
+        $teacher = $generator->create_and_enrol($course, 'editingteacher');
+        $student = $generator->create_and_enrol($course, 'student');
 
         [$quiz, $cm] = $this->create_timed_quiz($course);
         $context = \context_module::instance($cm->id);
