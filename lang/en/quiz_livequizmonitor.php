@@ -24,6 +24,7 @@
 
 defined('MOODLE_INTERNAL') || die();
 
+$string['attempts:showlabel'] = 'Show attempts';
 $string['emptycohort'] = 'No eligible students were found for this quiz.';
 $string['error:groupnotvisible'] = 'You do not have permission to view that group in this monitor.';
 $string['error:usernotvisible'] = 'The selected student is not visible in this monitor view.';
@@ -53,11 +54,7 @@ $string['liveindicator'] = 'Live';
 $string['livequizmonitor'] = 'Live monitor';
 $string['livequizmonitor:view'] = 'View the live quiz monitor report';
 $string['livequizmonitorreport'] = 'Live monitor';
-$string['logs:errorload'] = 'Failed to load logs. Please try again.';
-$string['logs:modaltitle'] = 'Recent logs for {$a}';
-$string['logs:nologs'] = 'No logs found for this student.';
 $string['logs:showlabel'] = 'Show logs';
-$string['logs:showmore'] = 'Show more';
 $string['message:timeextendedbody'] = 'Your teacher added {$a->minutes} minutes to your attempt for the quiz "{$a->quizname}".';
 $string['message:timeextendedsmall'] = '+{$a} min added to your quiz attempt';
 $string['message:timeextendedsubject'] = 'Extra time granted for {$a}';
@@ -101,7 +98,6 @@ $string['status:completed'] = 'Completed';
 $string['status:idle'] = 'Idle';
 $string['status:inprogress'] = 'In progress';
 $string['status:notstarted'] = 'Not started';
-$string['strftimerecentaccurate'] = '%d %b, %H:%M:%S';
 $string['summary:completed'] = 'Completed';
 $string['summary:idle'] = 'Idle';
 $string['summary:inprogress'] = 'In progress';

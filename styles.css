@@ -178,16 +178,11 @@
     opacity: 0.55;
 }
 
-.livequizmonitor-row-actions .dropdown-item .fa-book {
+/* Fixed-width leading icons so all action labels share the same left edge. */
+.livequizmonitor-row-actions .dropdown-item > .fa-solid:first-child {
+    width: 1.25em;
     margin-right: 0.5rem;
-}
-
-.livequizmonitor-row-actions .dropdown-item .fa-clock {
-    margin-right: 0.4rem;
-}
-
-.livequizmonitor-row-actions .dropdown-item .fa-clipboard-list {
-    margin-right: 0.6rem;
+    text-align: center;
 }
 
 .livequizmonitor-note-modal-body textarea {
@@ -203,8 +198,4 @@
 
 .livequizmonitor-blocked-flag {
     color: rgb(255, 59, 59);
-}
-
-.livequizmonitor-row-actions .dropdown-item .fa-unlock {
-    margin-right: 0.5rem;
 }
