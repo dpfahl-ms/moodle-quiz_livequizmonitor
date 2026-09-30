@@ -169,10 +169,6 @@
     display: none;
 }
 
-.livequizmonitor-row-actions .dropdown-item .fa-clock {
-    margin-right: 0.5rem;
-}
-
 .livequizmonitor-row-actions .menu-action-text {
     vertical-align: middle;
 }
@@ -184,6 +180,14 @@
 
 .livequizmonitor-row-actions .dropdown-item .fa-book {
     margin-right: 0.5rem;
+}
+
+.livequizmonitor-row-actions .dropdown-item .fa-clock {
+    margin-right: 0.4rem;
+}
+
+.livequizmonitor-row-actions .dropdown-item .fa-clipboard-list {
+    margin-right: 0.6rem;
 }
 
 .livequizmonitor-note-modal-body textarea {

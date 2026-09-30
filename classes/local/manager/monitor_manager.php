@@ -134,6 +134,9 @@ class monitor_manager {
         $context = context_module::instance($cm->id);
         $now = time();
 
+        // Can this user view log records in this context?
+        $canviewlogs = has_any_capability(['report/log:view', 'report/log:viewtoday'], $context);
+
         // Resolve group for enrolment query (respect quiz report group mode).
         if ($groupid <= 0) {
             $groupid = groups_get_activity_group($cm, true) ?: 0;
@@ -193,8 +196,9 @@ class monitor_manager {
         $summary = self::build_summary($rows, count($students));
 
         $state = (object) [
-            'quizid' => (int) $quiz->id,
+            'courseid' => (int) $course->id,
             'cmid' => (int) $cm->id,
+            'quizid' => (int) $quiz->id,
             'quizname' => format_string($quiz->name, true, ['context' => $context]),
             'quizpassword' => $quiz->password,
             'updatedat' => $now,
@@ -207,6 +211,7 @@ class monitor_manager {
             'idlecount' => $summary->idle->count,
             'onesessionactive' => $onesessionactive,
             'canunblock' => $canunblock,
+            'canviewlogs' => $canviewlogs,
             'sortcolumn' => $sortcolumn,
             'sortdirection' => $sortdirection,
         ];
@@ -423,6 +428,7 @@ class monitor_manager {
         $hastimer = in_array($status, self::INPROGRESS_OR_IDLE) && $timeremaining !== null;
 
         return (object) [
+            'courseid' => (int) $quiz->course,
             'userid' => (int) $user->id,
             'fullname' => fullname($user),
             'email' => $showemail ? $user->email : '',
