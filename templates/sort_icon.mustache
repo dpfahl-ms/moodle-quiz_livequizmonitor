@@ -1,0 +1,17 @@
+{{!
+    @template quiz_livequizmonitor/sort_icon
+
+    Example context (json):
+    {
+        "sorticon": "fa-arrow-down-short-wide",
+        "sortclass": "text-primary",
+        "sortlabel": "Ascending",
+        "sortbylabel": "Sort by Email"
+    }
+}}
+
+<i class="icon fa {{sorticon}} fa-fw {{sortclass}}"
+   title="{{sortlabel}}"
+   role="img"
+   aria-label="{{sortlabel}}"
+   data-sortby-label="{{sortbylabel}}"></i>

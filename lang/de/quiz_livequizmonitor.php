@@ -90,6 +90,7 @@ $string['privacy:metadata:notes:usermodified'] = 'Die Person, die die Notiz zule
 $string['progressanswered'] = '{$a->answered} von {$a->total} beantwortet';
 $string['showpassword:label'] = 'Quiz-Passwort anzeigen';
 $string['showpassword:modaltitle'] = 'Quiz-Passwort';
+$string['sortby'] = 'Sortieren nach {$a}';
 $string['staleindicator'] = 'Aktualisierung pausiert — letzte bekannte Daten werden angezeigt';
 $string['status:completed'] = 'Abgeschlossen';
 $string['status:idle'] = 'Inaktiv';

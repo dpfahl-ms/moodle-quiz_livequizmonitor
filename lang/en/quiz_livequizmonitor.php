@@ -90,6 +90,7 @@ $string['privacy:metadata:notes:usermodified'] = 'The user who last edited the n
 $string['progressanswered'] = '{$a->answered} of {$a->total} answered';
 $string['showpassword:label'] = 'Show quiz password';
 $string['showpassword:modaltitle'] = 'Quiz password';
+$string['sortby'] = 'Sort by {$a}';
 $string['staleindicator'] = 'Updates paused — showing last known data';
 $string['status:completed'] = 'Completed';
 $string['status:idle'] = 'Idle';
