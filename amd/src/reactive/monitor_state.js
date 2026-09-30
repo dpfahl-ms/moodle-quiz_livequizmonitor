@@ -84,6 +84,7 @@ export const createInitialState = () => ({
         idlecount: 0,
         onesessionactive: false,
         canunblock: false,
+        canviewattempts: false,
         canviewlogs: false,
     },
     summary: emptySummary(),
@@ -137,6 +138,9 @@ class MonitorMutations {
         }
         if (payload.canunblock !== undefined) {
             stateManager.state.meta.canunblock = payload.canunblock;
+        }
+        if (payload.canviewattempts !== undefined) {
+            stateManager.state.meta.canviewattempts = payload.canviewattempts;
         }
         if (payload.canviewlogs !== undefined) {
             stateManager.state.meta.canviewlogs = payload.canviewlogs;

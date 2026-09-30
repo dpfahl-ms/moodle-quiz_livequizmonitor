@@ -24,6 +24,7 @@
 
 defined('MOODLE_INTERNAL') || die();
 
+$string['attempts:showlabel'] = 'Versuche anzeigen';
 $string['emptycohort'] = 'Für dieses Quiz wurden keine berechtigten Teilnehmenden gefunden.';
 $string['error:groupnotvisible'] = 'Sie haben keine Berechtigung, diese Gruppe in diesem Monitor anzuzeigen.';
 $string['error:usernotvisible'] = 'Die ausgewählte Person ist in dieser Monitor-Ansicht nicht sichtbar.';
@@ -53,11 +54,7 @@ $string['liveindicator'] = 'Live';
 $string['livequizmonitor'] = 'Live-Monitor';
 $string['livequizmonitor:view'] = 'Live-Quiz-Monitor-Bericht anzeigen';
 $string['livequizmonitorreport'] = 'Live-Monitor';
-$string['logs:errorload'] = 'Fehler beim Laden der Protokolle. Bitte versuchen Sie es erneut.';
-$string['logs:modaltitle'] = 'Aktuelle Logdaten für {$a}';
-$string['logs:nologs'] = 'Für diesen Student wurden keine Logdaten gefunden.';
 $string['logs:showlabel'] = 'Logs anzeigen';
-$string['logs:showmore'] = 'Mehr anzeigen';
 $string['message:timeextendedbody'] = 'Ihre Lehrperson hat {$a->minutes} Minuten zu Ihrem Versuch für das Quiz „{$a->quizname}“ hinzugefügt.';
 $string['message:timeextendedsmall'] = '+{$a} Min. zu Ihrem Quiz-Versuch hinzugefügt';
 $string['message:timeextendedsubject'] = 'Zusätzliche Zeit für {$a}';
@@ -101,7 +98,6 @@ $string['status:completed'] = 'Abgeschlossen';
 $string['status:idle'] = 'Inaktiv';
 $string['status:inprogress'] = 'In Bearbeitung';
 $string['status:notstarted'] = 'Nicht begonnen';
-$string['strftimerecentaccurate'] = '%d. %b %H:%M:%S';
 $string['summary:completed'] = 'Abgeschlossen';
 $string['summary:idle'] = 'Inaktiv';
 $string['summary:inprogress'] = 'In Bearbeitung';

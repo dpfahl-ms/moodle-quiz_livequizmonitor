@@ -46,6 +46,7 @@ class monitor_renderer extends plugin_renderer_base {
         $idlecount = (int) ($state->idlecount ?? $state->summary->idle->count);
         $onesessionactive = !empty($state->onesessionactive);
         $canunblock = !empty($state->canunblock);
+        $canviewattempts = !empty($state->canviewattempts);
         $canviewlogs = !empty($state->canviewlogs);
 
         // Define labels for sortable table headers.
@@ -107,6 +108,7 @@ class monitor_renderer extends plugin_renderer_base {
             $student['canextend'] = $canextend;
             $student['onesessionactive'] = $onesessionactive;
             $student['canunblock'] = $canunblock;
+            $student['canviewattempts'] = $canviewattempts;
             $student['canviewlogs'] = $canviewlogs;
             $student['notelabel'] = !empty($row->hasnote)
                 ? get_string('notes:editlabel', 'quiz_livequizmonitor')
@@ -115,10 +117,10 @@ class monitor_renderer extends plugin_renderer_base {
             $student['extendrowlabel'] = get_string('extend:rowaction', 'quiz_livequizmonitor');
             $student['unblocklabel'] = get_string('onesession:unblocklabel', 'quiz_livequizmonitor');
             $student['blockedflaglabel'] = get_string('onesession:blockedflag', 'quiz_livequizmonitor');
+            $student['showattemptslabel'] = get_string('attempts:showlabel', 'quiz_livequizmonitor');
             $student['showlogslabel'] = get_string('logs:showlabel', 'quiz_livequizmonitor');
             $students[] = $student;
         }
-
         return [
             'quizname' => $state->quizname,
             'quizpassword' => $state->quizpassword,
@@ -138,6 +140,7 @@ class monitor_renderer extends plugin_renderer_base {
             'canextend' => $canextend,
             'onesessionactive' => $onesessionactive,
             'canunblock' => $canunblock,
+            'canviewattempts' => $canviewattempts,
             'canviewlogs' => $canviewlogs,
             'inprogresscount' => $inprogresscount,
             'idlecount' => $idlecount,
@@ -149,6 +152,7 @@ class monitor_renderer extends plugin_renderer_base {
             'noteseditlabel' => get_string('notes:editlabel', 'quiz_livequizmonitor'),
             'unblocklabel' => get_string('onesession:unblocklabel', 'quiz_livequizmonitor'),
             'blockedflaglabel' => get_string('onesession:blockedflag', 'quiz_livequizmonitor'),
+            'showattemptslabel' => get_string('attempts:showlabel', 'quiz_livequizmonitor'),
             'showlogslabel' => get_string('logs:showlabel', 'quiz_livequizmonitor'),
             'actionsmenulabel' => get_string('actions'),
             'tableheaders' => $tableheaders,

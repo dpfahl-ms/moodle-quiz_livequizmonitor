@@ -134,6 +134,8 @@ class monitor_manager {
         $context = context_module::instance($cm->id);
         $now = time();
 
+        $canviewattempts = has_capability('mod/quiz:viewreports', $context);
+
         // Can this user view log records in this context?
         $canviewlogs = has_any_capability(['report/log:view', 'report/log:viewtoday'], $context);
 
@@ -211,6 +213,7 @@ class monitor_manager {
             'idlecount' => $summary->idle->count,
             'onesessionactive' => $onesessionactive,
             'canunblock' => $canunblock,
+            'canviewattempts' => $canviewattempts,
             'canviewlogs' => $canviewlogs,
             'sortcolumn' => $sortcolumn,
             'sortdirection' => $sortdirection,
@@ -431,6 +434,8 @@ class monitor_manager {
             'courseid' => (int) $quiz->course,
             'userid' => (int) $user->id,
             'fullname' => fullname($user),
+            'firstinitial' => \core_text::strtoupper(\core_text::substr($user->firstname, 0, 1)),
+            'lastinitial' => \core_text::strtoupper(\core_text::substr($user->lastname, 0, 1)),
             'email' => $showemail ? $user->email : '',
             'showemail' => $showemail,
             'status' => $status,

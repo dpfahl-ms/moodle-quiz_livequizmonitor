@@ -122,6 +122,8 @@ class get_monitor_state extends external_api {
         $student = new external_single_structure([
             'userid' => new external_value(PARAM_INT, 'User id'),
             'fullname' => new external_value(PARAM_TEXT, 'Full name'),
+            'firstinitial' => new external_value(PARAM_TEXT, 'Initial of first name'),
+            'lastinitial' => new external_value(PARAM_TEXT, 'Initial of last name'),
             'email' => new external_value(PARAM_TEXT, 'Email'),
             'showemail' => new external_value(PARAM_BOOL, 'Show email'),
             'status' => new external_value(PARAM_ALPHA, 'Status'),
@@ -157,6 +159,7 @@ class get_monitor_state extends external_api {
             'idlecount' => new external_value(PARAM_INT, 'Idle student count'),
             'onesessionactive' => new external_value(PARAM_BOOL, 'Onesession rule active for quiz'),
             'canunblock' => new external_value(PARAM_BOOL, 'Viewer may unblock attempts'),
+            'canviewattempts' => new external_value(PARAM_BOOL, 'Viewer may view student attempts'),
             'canviewlogs' => new external_value(PARAM_BOOL, 'Viewer may view student logs'),
             'summary' => new external_single_structure([
                 'notstarted' => $statuscount,
@@ -182,6 +185,8 @@ class get_monitor_state extends external_api {
             $entry = [
                 'userid' => $row->userid,
                 'fullname' => $row->fullname,
+                'firstinitial' => $row->firstinitial,
+                'lastinitial' => $row->lastinitial,
                 'email' => $row->email,
                 'showemail' => (bool) $row->showemail,
                 'status' => $row->status,
@@ -226,6 +231,7 @@ class get_monitor_state extends external_api {
             'idlecount' => (int) ($state->idlecount ?? $summary->idle->count),
             'onesessionactive' => (bool) ($state->onesessionactive ?? false),
             'canunblock' => (bool) ($state->canunblock ?? false),
+            'canviewattempts' => (bool) ($state->canviewattempts ?? false),
             'canviewlogs' => (bool) ($state->canviewlogs ?? false),
             'summary' => [
                 'notstarted' => (array) $summary->notstarted,
