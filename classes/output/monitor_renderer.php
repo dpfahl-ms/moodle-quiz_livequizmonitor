@@ -25,6 +25,7 @@
 namespace quiz_livequizmonitor\output;
 
 use plugin_renderer_base;
+use quiz_livequizmonitor\local\column_helper;
 use quiz_livequizmonitor\local\manager\monitor_manager;
 use stdClass;
 
@@ -48,56 +49,7 @@ class monitor_renderer extends plugin_renderer_base {
         $canunblock = !empty($state->canunblock);
         $canviewattempts = !empty($state->canviewattempts);
         $canviewlogs = !empty($state->canviewlogs);
-
-        // Define labels for sortable table headers.
-        $headers = [
-            'status' => get_string('table:status', 'quiz_livequizmonitor'),
-            'student' => get_string('table:student', 'quiz_livequizmonitor'),
-            'email' => get_string('table:email', 'quiz_livequizmonitor'),
-            'progress' => get_string('table:progress', 'quiz_livequizmonitor'),
-            'timeremaining' => get_string('table:timeremaining', 'quiz_livequizmonitor'),
-        ];
-
-        // If the first student does not have an email address, hide the email column.
-        if (empty($state->students) || empty($state->students[0]->showemail)) {
-            unset($headers['email']);
-            $showemailcolumn = false;
-        } else {
-            $showemailcolumn = true;
-        }
-
-        $tableheaders = [];
-
-        foreach ($headers as $header => $label) {
-            $sortcolumn = $header === 'student' ? 'fullname' : $header;
-            $active = $sortcolumn === $state->sortcolumn;
-
-            if ($active && $state->sortdirection === 'desc') {
-                $sortlabel = get_string('desc');
-                $sorticon = 'fa-arrow-down-short-wide';
-            } else {
-                $sortlabel = get_string('asc');
-                $sorticon = 'fa-arrow-up-short-wide';
-            }
-            $sortbylabel = get_string('sortby', 'quiz_livequizmonitor', $label);
-
-            if ($active) {
-                $sortclass = 'text-primary';
-            } else {
-                $sortclass = 'text-secondary';
-                $sortlabel = $sortbylabel;
-            }
-
-            $tableheaders[] = [
-                'label' => $label,
-                'sortcolumn' => $sortcolumn,
-                'active' => $active,
-                'sorticon' => $sorticon,
-                'sortlabel' => $sortlabel,
-                'sortclass' => $sortclass,
-                'sortbylabel' => $sortbylabel,
-            ];
-        }
+        $showemailcolumn = !empty($state->students) && !empty($state->students[0]->showemail);
 
         $students = [];
         foreach ($state->students as $row) {
@@ -123,6 +75,9 @@ class monitor_renderer extends plugin_renderer_base {
             $student['showlogslabel'] = get_string('logs:showlabel', 'quiz_livequizmonitor');
             $students[] = $student;
         }
+
+        $tableheaders = $this->export_table_headers();
+
         return [
             'quizname' => $state->quizname,
             'quizpassword' => $state->quizpassword,
@@ -160,6 +115,8 @@ class monitor_renderer extends plugin_renderer_base {
             'showlogslabel' => get_string('logs:showlabel', 'quiz_livequizmonitor'),
             'actionsmenulabel' => get_string('actions'),
             'tableheaders' => $tableheaders,
+            'columns' => $this->export_columns($state, $tableheaders),
+            'hiddencolumnsjson' => json_encode(column_helper::get_hidden_columns()),
             'showemailcolumn' => $showemailcolumn,
             'showactionscolumn' => true, // Always show Actions column.
             'actionscolumnlabel' => get_string('table:actions', 'quiz_livequizmonitor'),
@@ -168,6 +125,89 @@ class monitor_renderer extends plugin_renderer_base {
             'sortascending' => get_string('asc'),
             'sortdescending' => get_string('desc'),
         ];
+    }
+
+    /**
+     * Build column header labels from the column registry.
+     *
+     * @return array<string, string> Column id => header label.
+     */
+    protected function export_table_headers(): array {
+        $headers = [];
+        foreach (column_helper::get_columns() as $columnid => $column) {
+            $headers[$columnid] = get_string($column['langkey'], 'quiz_livequizmonitor');
+        }
+        return $headers;
+    }
+
+    /**
+     * Build the ordered, generic column list the header template loops over.
+     *
+     * This is the single thing the template needs to render any number of
+     * columns, in any order, without knowing their ids in advance: each
+     * entry carries its own visibility (showcolumn), lock state,
+     * hide/show tooltip labels for the +/- toggle button, and sort metadata.
+     *
+     * @param stdClass $state Monitor state from monitor_manager.
+     * @param array $tableheaders Column id maps to header label.
+     * @return array List of column context entries, in registry order.
+     */
+    protected function export_columns(stdClass $state, array $tableheaders): array {
+        // Columns whose presence (not visibility) depends on something other
+        // than the registry itself, e.g. a capability or per-quiz setting.
+        // Anything not listed here defaults to always present.
+        $showflags = [
+            'email' => !empty($state->students) && !empty($state->students[0]->showemail),
+        ];
+
+        $columns = [];
+        foreach (column_helper::get_columns() as $columnid => $column) {
+            $label = $tableheaders[$columnid] ?? $columnid;
+            $locked = !empty($column['locked']);
+            // Status is locked (always visible) but still sortable; actions is neither toggleable nor sortable.
+            $sortable = $columnid !== 'actions';
+
+            $entry = [
+                'id' => $columnid,
+                'label' => $label,
+                'locked' => $locked,
+                'showcolumn' => $showflags[$columnid] ?? true,
+                'hidelabel' => get_string('columns:hidecolumn', 'quiz_livequizmonitor', $label),
+                'showlabel' => get_string('columns:showcolumn', 'quiz_livequizmonitor', $label),
+                'sortable' => $sortable,
+            ];
+
+            if ($sortable) {
+                $sortcolumn = $columnid === 'student' ? 'fullname' : $columnid;
+                $active = $sortcolumn === ($state->sortcolumn ?? 'status');
+
+                if ($active && ($state->sortdirection ?? 'asc') === 'desc') {
+                    $sortlabel = get_string('desc');
+                    $sorticon = 'fa-arrow-down-short-wide';
+                } else {
+                    $sortlabel = get_string('asc');
+                    $sorticon = 'fa-arrow-up-short-wide';
+                }
+                $sortbylabel = get_string('sortby', 'quiz_livequizmonitor', $label);
+
+                if ($active) {
+                    $sortclass = 'text-primary';
+                } else {
+                    $sortclass = 'text-secondary';
+                    $sortlabel = $sortbylabel;
+                }
+
+                $entry['sortcolumn'] = $sortcolumn;
+                $entry['active'] = $active;
+                $entry['sorticon'] = $sorticon;
+                $entry['sortlabel'] = $sortlabel;
+                $entry['sortclass'] = $sortclass;
+                $entry['sortbylabel'] = $sortbylabel;
+            }
+
+            $columns[] = $entry;
+        }
+        return $columns;
     }
 
     /**

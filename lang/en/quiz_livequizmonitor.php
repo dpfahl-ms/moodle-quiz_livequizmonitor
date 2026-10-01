@@ -25,6 +25,8 @@
 defined('MOODLE_INTERNAL') || die();
 
 $string['attempts:showlabel'] = 'Show attempts';
+$string['columns:hidecolumn'] = 'Hide {$a} column';
+$string['columns:showcolumn'] = 'Show {$a} column';
 $string['emptycohort'] = 'No eligible students were found for this quiz.';
 $string['error:groupnotvisible'] = 'You do not have permission to view that group in this monitor.';
 $string['error:usernotvisible'] = 'The selected student is not visible in this monitor view.';
@@ -92,6 +94,8 @@ $string['privacy:metadata:notes:content'] = 'The note text.';
 $string['privacy:metadata:notes:timemodified'] = 'When the note was last modified.';
 $string['privacy:metadata:notes:userid'] = 'The student the note is about.';
 $string['privacy:metadata:notes:usermodified'] = 'The user who last edited the note.';
+$string['privacy:metadata:preference:hiddencolumns'] = 'The set of live monitor table columns you have chosen to hide.';
+$string['privacy:metadata:preference:hiddencolumns_desc'] = 'Hidden live monitor columns: {$a}';
 $string['progressanswered'] = '{$a->answered} of {$a->total} answered';
 $string['showpassword:label'] = 'Show quiz password';
 $string['showpassword:modaltitle'] = 'Quiz password';

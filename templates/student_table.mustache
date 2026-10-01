@@ -8,56 +8,29 @@
         "filterempty": "No students match the current filters.",
         "showemailcolumn": true,
         "showactionscolumn": true,
-        "tableheaders": [
-            {
-                "label": "Status",
-                "sortcolumn": "status",
-                "active": true,
-                "sorticon": "fa-arrow-up-short-wide",
-                "sortlabel": "Ascending",
-                "sortclass": "text-primary",
-                "sortbylabel": "Sort by Status"
-            },
-            {
-                "label": "Student",
-                "sortcolumn": "fullname",
-                "active": false,
-                "sorticon": "fa-arrow-up-short-wide",
-                "sortlabel": "Sort by Student",
-                "sortclass": "text-secondary",
-                "sortbylabel": "Sort by Student"
-            },
-            {
-                "label": "Email",
-                "sortcolumn": "email",
-                "active": false,
-                "sorticon": "fa-arrow-up-short-wide",
-                "sortlabel": "Sort by Email",
-                "sortclass": "text-secondary",
-                "sortbylabel": "Sort by Email"
-            },
-            {
-                "label": "Progress",
-                "sortcolumn": "progress",
-                "active": false,
-                "sorticon": "fa-arrow-up-short-wide",
-                "sortlabel": "Sort by Progress",
-                "sortclass": "text-secondary",
-                "sortbylabel": "Sort by Progress"
-            },
-            {
-                "label": "Time remaining",
-                "sortcolumn": "timeremaining",
-                "active": false,
-                "sorticon": "fa-arrow-up-short-wide",
-                "sortlabel": "Sort by Time remaining",
-                "sortclass": "text-secondary",
-                "sortbylabel": "Sort by Time remaining"
-            }
+        "columns": [
+            {"id": "status", "label": "Status", "locked": true, "showcolumn": true, "sortable": true,
+             "sortcolumn": "status", "active": true, "sorticon": "fa-arrow-up-short-wide",
+             "sortlabel": "Ascending", "sortclass": "text-primary", "sortbylabel": "Sort by Status"},
+            {"id": "student", "label": "Student", "locked": false, "showcolumn": true, "sortable": true,
+             "sortcolumn": "fullname", "active": false, "sorticon": "fa-arrow-up-short-wide",
+             "sortlabel": "Sort by Student", "sortclass": "text-secondary", "sortbylabel": "Sort by Student",
+             "hidelabel": "Hide Student column", "showlabel": "Show Student column"},
+            {"id": "email", "label": "Email", "locked": false, "showcolumn": true, "sortable": true,
+             "sortcolumn": "email", "active": false, "sorticon": "fa-arrow-up-short-wide",
+             "sortlabel": "Sort by Email", "sortclass": "text-secondary", "sortbylabel": "Sort by Email",
+             "hidelabel": "Hide Email column", "showlabel": "Show Email column"},
+            {"id": "progress", "label": "Progress", "locked": false, "showcolumn": true, "sortable": true,
+             "sortcolumn": "progress", "active": false, "sorticon": "fa-arrow-up-short-wide",
+             "sortlabel": "Sort by Progress", "sortclass": "text-secondary", "sortbylabel": "Sort by Progress",
+             "hidelabel": "Hide Progress column", "showlabel": "Show Progress column"},
+            {"id": "timeremaining", "label": "Time remaining", "locked": false, "showcolumn": true, "sortable": true,
+             "sortcolumn": "timeremaining", "active": false, "sorticon": "fa-arrow-up-short-wide",
+             "sortlabel": "Sort by Time remaining", "sortclass": "text-secondary",
+             "sortbylabel": "Sort by Time remaining",
+             "hidelabel": "Hide Time remaining column", "showlabel": "Show Time remaining column"},
+            {"id": "actions", "label": "Actions", "locked": true, "showcolumn": true, "sortable": false}
         ],
-        "actionscolumnlabel": "Actions",
-        "sortascending": "Ascending",
-        "sortdescending": "Descending",
         "students": []
     }
 }}
@@ -66,20 +39,40 @@
 </div>
 <div class="table-responsive livequizmonitor-student-list" data-region="student-table">
     <table class="table table-striped generaltable livequizmonitor-table">
-    <thead>
-        <tr>
-            {{#tableheaders}}
-            <th data-action="sort-column" data-sort-column="{{sortcolumn}}">
-                {{label}}
-                {{> quiz_livequizmonitor/sort_icon}}
-            </th>
-            {{/tableheaders}}
-
-            {{#showactionscolumn}}
-            <th>{{actionscolumnlabel}}</th>
-            {{/showactionscolumn}}
-        </tr>
-    </thead>
+        <thead>
+            <tr>
+                {{#columns}}
+                {{#showcolumn}}
+                <th data-column="{{id}}"
+                    class="livequizmonitor-th {{^locked}}livequizmonitor-th-toggleable{{/locked}}"
+                    {{#sortable}}data-sort-column="{{sortcolumn}}"{{/sortable}}>
+                    <span class="livequizmonitor-th-label"
+                          data-colcontent="{{id}}"
+                          {{#sortable}}data-action="sort-column" data-sort-column="{{sortcolumn}}" role="button" tabindex="0"{{/sortable}}>
+                        {{label}}
+                        {{#sortable}}
+                        {{> quiz_livequizmonitor/sort_icon}}
+                        {{/sortable}}
+                    </span>
+                    {{^locked}}
+                    <button type="button"
+                            class="livequizmonitor-col-toggle"
+                            data-action="toggle-column"
+                            data-column="{{id}}"
+                            data-hidelabel="{{hidelabel}}"
+                            data-showlabel="{{showlabel}}"
+                            aria-pressed="true"
+                            aria-expanded="true"
+                            title="{{hidelabel}}">
+                        <i class="fa-solid fa-minus" aria-hidden="true"></i>
+                        <span class="sr-only">{{hidelabel}}</span>
+                    </button>
+                    {{/locked}}
+                </th>
+                {{/showcolumn}}
+                {{/columns}}
+            </tr>
+        </thead>
         <tbody>
             {{#students}}
             {{> quiz_livequizmonitor/student_row }}

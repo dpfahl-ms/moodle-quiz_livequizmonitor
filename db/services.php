@@ -75,4 +75,14 @@ $functions = [
         'loginrequired' => true,
         'capabilities' => 'quiz/livequizmonitor:view',
     ],
+    'quiz_livequizmonitor_set_hidden_columns' => [
+        'classname' => 'quiz_livequizmonitor\\external\\set_hidden_columns',
+        'methodname' => 'execute',
+        'classpath' => '',
+        'description' => 'Saves the current user\'s hidden-column preference for the live monitor table.',
+        'type' => 'write',
+        'ajax' => true,
+        'loginrequired' => true,
+        'capabilities' => 'quiz/livequizmonitor:view',
+    ],
 ];

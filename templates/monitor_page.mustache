@@ -43,54 +43,30 @@
             "chips": []
         },
         "filterempty": "No students match the current filters.",
-        "tableheaders": [
-            {
-                "label": "Status",
-                "sortcolumn": "status",
-                "active": true,
-                "sorticon": "fa-arrow-up-short-wide",
-                "sortlabel": "Ascending",
-                "sortclass": "text-primary",
-                "sortbylabel": "Sort by Status"
-            },
-            {
-                "label": "Student",
-                "sortcolumn": "fullname",
-                "active": false,
-                "sorticon": "fa-arrow-up-short-wide",
-                "sortlabel": "Sort by Student",
-                "sortclass": "text-secondary",
-                "sortbylabel": "Sort by Student"
-            },
-            {
-                "label": "Email",
-                "sortcolumn": "email",
-                "active": false,
-                "sorticon": "fa-arrow-up-short-wide",
-                "sortlabel": "Sort by Email",
-                "sortclass": "text-secondary",
-                "sortbylabel": "Sort by Email"
-            },
-            {
-                "label": "Progress",
-                "sortcolumn": "progress",
-                "active": false,
-                "sorticon": "fa-arrow-up-short-wide",
-                "sortlabel": "Sort by Progress",
-                "sortclass": "text-secondary",
-                "sortbylabel": "Sort by Progress"
-            },
-            {
-                "label": "Time remaining",
-                "sortcolumn": "timeremaining",
-                "active": false,
-                "sorticon": "fa-arrow-up-short-wide",
-                "sortlabel": "Sort by Time remaining",
-                "sortclass": "text-secondary",
-                "sortbylabel": "Sort by Time remaining"
-            }
+        "columns": [
+            {"id": "status", "label": "Status", "locked": true, "showcolumn": true, "sortable": true,
+             "sortcolumn": "status", "active": true, "sorticon": "fa-arrow-up-short-wide",
+             "sortlabel": "Ascending", "sortclass": "text-primary", "sortbylabel": "Sort by Status"},
+            {"id": "student", "label": "Student", "locked": false, "showcolumn": true, "sortable": true,
+             "sortcolumn": "fullname", "active": false, "sorticon": "fa-arrow-up-short-wide",
+             "sortlabel": "Sort by Student", "sortclass": "text-secondary", "sortbylabel": "Sort by Student",
+             "hidelabel": "Hide Student column", "showlabel": "Show Student column"},
+            {"id": "email", "label": "Email", "locked": false, "showcolumn": true, "sortable": true,
+             "sortcolumn": "email", "active": false, "sorticon": "fa-arrow-up-short-wide",
+             "sortlabel": "Sort by Email", "sortclass": "text-secondary", "sortbylabel": "Sort by Email",
+             "hidelabel": "Hide Email column", "showlabel": "Show Email column"},
+            {"id": "progress", "label": "Progress", "locked": false, "showcolumn": true, "sortable": true,
+             "sortcolumn": "progress", "active": false, "sorticon": "fa-arrow-up-short-wide",
+             "sortlabel": "Sort by Progress", "sortclass": "text-secondary", "sortbylabel": "Sort by Progress",
+             "hidelabel": "Hide Progress column", "showlabel": "Show Progress column"},
+            {"id": "timeremaining", "label": "Time remaining", "locked": false, "showcolumn": true, "sortable": true,
+             "sortcolumn": "timeremaining", "active": false, "sorticon": "fa-arrow-up-short-wide",
+             "sortlabel": "Sort by Time remaining", "sortclass": "text-secondary",
+             "sortbylabel": "Sort by Time remaining",
+             "hidelabel": "Hide Time remaining column", "showlabel": "Show Time remaining column"},
+            {"id": "actions", "label": "Actions", "locked": true, "showcolumn": true, "sortable": false}
         ],
-        "actionscolumnlabel": "Actions",
+        "hiddencolumnsjson": "[]",
         "sortascending": "Ascending",
         "sortdescending": "Descending",
         "students": []
@@ -119,7 +95,8 @@
      data-onesession-active="{{#onesessionactive}}1{{/onesessionactive}}{{^onesessionactive}}0{{/onesessionactive}}"
      data-canunblock="{{#canunblock}}1{{/canunblock}}{{^canunblock}}0{{/canunblock}}"
      data-canviewattempts="{{#canviewattempts}}1{{/canviewattempts}}{{^canviewattempts}}0{{/canviewattempts}}"
-     data-canviewlogs="{{#canviewlogs}}1{{/canviewlogs}}{{^canviewlogs}}0{{/canviewlogs}}">
+     data-canviewlogs="{{#canviewlogs}}1{{/canviewlogs}}{{^canviewlogs}}0{{/canviewlogs}}"
+     data-hidden-columns="{{hiddencolumnsjson}}">
 
     <div class="livequizmonitor-header d-flex flex-wrap align-items-center justify-content-between mb-3">
         <div>
