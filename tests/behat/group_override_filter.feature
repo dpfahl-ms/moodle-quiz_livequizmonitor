@@ -69,23 +69,62 @@ Feature: Filter by group override in live quiz monitor
     And "With group override (2)" "button" should exist
 
   @javascript
-  Scenario: A user override takes precedence over a group override for the same student
+  Scenario: A user override only takes precedence for the settings it overrides
     Given user "student1" has an attempts override on quiz "Quiz 1"
     And I log in as "teacher1"
     And I am on the live monitor report for "Quiz 1"
 
-    # student1 has BOTH a user override and membership in the overridden group,
-    # so only student3 should count towards the group-override total.
-    Then "With group override (1)" "button" should exist
+    # student1's user override sets only attempts, so Group A's time limit still applies:
+    # student1 counts towards both totals and shows both badges plus the timer badge.
+    Then "With group override (2)" "button" should exist
     And "With user override (1)" "button" should exist
-
-    # student1 shows the user-override badge (fa-user-gear), not the group one.
     And "[data-field='fullname'] i[data-override-badge='user']" "css_element" should exist in the "Student ONE" "table_row"
-    And "[data-field='fullname'] i[data-override-badge='group']" "css_element" should not exist in the "Student ONE" "table_row"
+    And "[data-field='fullname'] i[data-override-badge='group']" "css_element" should exist in the "Student ONE" "table_row"
+    And "[data-field='timeremaining'] .livequizmonitor-override-flag-timer" "css_element" should exist in the "Student ONE" "table_row"
 
-    # student3 (group only) shows the group-override badge (fa-users-gear).
+    # student3 (group only) shows the group-override badge only.
     And "[data-field='fullname'] i[data-override-badge='group']" "css_element" should exist in the "Student THREE" "table_row"
     And "[data-field='fullname'] i[data-override-badge='user']" "css_element" should not exist in the "Student THREE" "table_row"
+
+  @javascript
+  Scenario: A user override replaces a group override that sets the same settings
+    Given the following "mod_quiz > user overrides" exist:
+      | quiz   | user     | timelimit |
+      | Quiz 1 | student1 | 7200      |
+    And I log in as "teacher1"
+    And I am on the live monitor report for "Quiz 1"
+
+    # Group A only overrides the time limit, which student1's user override also sets,
+    # so the group override has no effect on student1.
+    Then "With group override (1)" "button" should exist
+    And "With user override (1)" "button" should exist
+    And "[data-field='fullname'] i[data-override-badge='user']" "css_element" should exist in the "Student ONE" "table_row"
+    And "[data-field='fullname'] i[data-override-badge='group']" "css_element" should not exist in the "Student ONE" "table_row"
+    And "[data-field='timeremaining'] .livequizmonitor-override-flag-timer" "css_element" should exist in the "Student ONE" "table_row"
+
+  @javascript
+  Scenario: Time-related badge appears when only one of a student's groups overrides time
+    Given the following "groups" exist:
+      | name    | course | idnumber |
+      | Group B | C1     | GB       |
+      | Group C | C1     | GC       |
+    And the following "group members" exist:
+      | user     | group |
+      | student2 | GB    |
+      | student2 | GC    |
+    # Group B's override (no time settings) is created first, so it is read first.
+    And the following "mod_quiz > group overrides" exist:
+      | quiz   | group | attempts |
+      | Quiz 1 | GB    | 2        |
+    And the following "mod_quiz > group overrides" exist:
+      | quiz   | group | timelimit |
+      | Quiz 1 | GC    | 3600      |
+    And I log in as "teacher1"
+    And I am on the live monitor report for "Quiz 1"
+
+    Then "With group override (3)" "button" should exist
+    And "[data-field='fullname'] i[data-override-badge='group']" "css_element" should exist in the "Student TWO" "table_row"
+    And "[data-field='timeremaining'] .livequizmonitor-override-flag-timer" "css_element" should exist in the "Student TWO" "table_row"
 
   @javascript
   Scenario: Time-related badge appears for both user and group time-related overrides

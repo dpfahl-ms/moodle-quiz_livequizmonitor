@@ -35,13 +35,6 @@ use context_module;
  */
 class overrides_manager {
     /**
-     * Columns in {quiz_overrides} that represent an id in another table.
-     *
-     * @var string[] columns that hold ids
-     */
-    protected const ID_COLUMNS = ['userid', 'groupid'];
-
-    /**
      * Columns on {quiz_overrides} that represent an actual override value.
      *
      * A row only counts as "having an override" if at least one of these
@@ -73,22 +66,16 @@ class overrides_manager {
     /**
      * Load has-override flags for a set of users, keyed by userid.
      *
-     * A user override always takes precedence over a group override for the
-     * same student, regardless of which override record is processed first:
-     * the user-override branch unconditionally overwrites the map entry, while
-     * the group-override branch only writes when no override has been recorded
-     * for that student yet.
+     * As in core, precedence is resolved per setting: a user override takes
+     * precedence over group overrides only for the settings it actually sets.
+     * Any setting the user override leaves unset falls through to the overrides
+     * of every group the student belongs to.
      *
-     * @param int $courseid Course id (to enumerate groups).
      * @param int $quizid Quiz instance id.
      * @param int[] $userids User ids to check.
-     * @return array<int, bool|stdClass> Map userid => false, or an object of override flags.
+     * @return array<int, bool|\stdClass> Map userid => false, or an object of override flags.
      */
-    public static function get_override_map(
-        int $courseid,
-        int $quizid,
-        array $userids
-    ): array {
+    public static function get_override_map(int $quizid, array $userids): array {
         global $DB;
 
         $map = array_fill_keys($userids, false);
@@ -96,45 +83,96 @@ class overrides_manager {
             return $map;
         }
 
-        // Cache the array of groups with members.
-        $groups = groups_get_all_groups($courseid, 0, 0, 'g.*', true);
-
-        $overrides = $DB->get_records('quiz_overrides', ['quiz' => $quizid]);
-        foreach ($overrides as $override) {
-            $userid = (int) $override->userid;
-            $groupid = (int) $override->groupid;
-
-            // Determine if this is a time override.
-            $hastimeoverride = (bool) array_filter(
-                self::TIME_COLUMNS,
-                static fn(string $column): bool => !empty($override->$column)
-            );
-
-            // User override.
-            if ($userid && array_key_exists($userid, $map)) {
-                $map[$userid] = (object) [
-                    'hasuseroverride' => true,
-                    'hasgroupoverride' => false,
-                    'hastimeoverride' => $hastimeoverride,
-                ];
-                continue;
-            }
-
-            // Group override.
-            if ($groupid && array_key_exists($groupid, $groups)) {
-                foreach ($groups[$groupid]->members as $uid) {
-                    if (array_key_exists($uid, $map) && $map[$uid] === false) {
-                        $map[$uid] = (object) [
-                            'hasuseroverride' => false,
-                            'hasgroupoverride' => true,
-                            'hastimeoverride' => $hastimeoverride,
-                        ];
-                    }
+        // Split this quiz's overrides into user overrides (for displayed students only) and group overrides.
+        $useroverrides = [];
+        $groupoverrides = [];
+        foreach ($DB->get_records('quiz_overrides', ['quiz' => $quizid]) as $override) {
+            if (!empty($override->userid)) {
+                $userid = (int) $override->userid;
+                if (array_key_exists($userid, $map)) {
+                    $useroverrides[$userid] = $override;
                 }
-                continue;
+            } else if (!empty($override->groupid)) {
+                $groupoverrides[(int) $override->groupid] = $override;
             }
         }
 
+        $usergroups = self::get_override_group_memberships(array_keys($groupoverrides), $userids);
+
+        foreach (array_keys($map) as $userid) {
+            $usercolumns = isset($useroverrides[$userid]) ? self::get_overridden_columns($useroverrides[$userid]) : [];
+
+            // Collect the settings overridden by any of the student's groups ...
+            $groupcolumns = [];
+            foreach ($usergroups[$userid] ?? [] as $groupid) {
+                $groupcolumns = array_merge($groupcolumns, self::get_overridden_columns($groupoverrides[$groupid]));
+            }
+            // ... except those already set by the user override, which takes precedence.
+            $groupcolumns = array_values(array_diff(array_unique($groupcolumns), $usercolumns));
+
+            if ($usercolumns === [] && $groupcolumns === []) {
+                continue;
+            }
+
+            $effectivecolumns = array_merge($usercolumns, $groupcolumns);
+            $map[$userid] = (object) [
+                'hasuseroverride' => $usercolumns !== [],
+                'hasgroupoverride' => $groupcolumns !== [],
+                'hastimeoverride' => array_intersect(self::TIME_COLUMNS, $effectivecolumns) !== [],
+                'hasusertimeoverride' => array_intersect(self::TIME_COLUMNS, $usercolumns) !== [],
+                'hasgrouptimeoverride' => array_intersect(self::TIME_COLUMNS, $groupcolumns) !== [],
+            ];
+        }
+
         return $map;
+    }
+
+    /**
+     * Get the settings that an override record actually overrides.
+     *
+     * Core stores null for any setting the override leaves unchanged. Other values,
+     * including 0 (e.g. "no time limit" or "no close date"), are genuine overrides.
+     *
+     * @param \stdClass $override A {quiz_overrides} record.
+     * @return string[] Names of the overridden columns.
+     */
+    protected static function get_overridden_columns(\stdClass $override): array {
+        return array_values(array_filter(
+            self::VALUE_COLUMNS,
+            static fn(string $column): bool => $override->$column !== null
+        ));
+    }
+
+    /**
+     * Get the override groups that each of the given users belongs to.
+     *
+     * @param int[] $groupids Ids of groups that have an override for this quiz.
+     * @param int[] $userids User ids to check.
+     * @return array<int, int[]> Map userid => list of groupids.
+     */
+    protected static function get_override_group_memberships(array $groupids, array $userids): array {
+        global $DB;
+
+        if ($groupids === [] || $userids === []) {
+            return [];
+        }
+
+        [$groupsql, $groupparams] = $DB->get_in_or_equal($groupids, SQL_PARAMS_NAMED, 'groupid');
+        [$usersql, $userparams] = $DB->get_in_or_equal($userids, SQL_PARAMS_NAMED, 'userid');
+
+        $memberships = [];
+        $rs = $DB->get_recordset_select(
+            'groups_members',
+            "groupid $groupsql AND userid $usersql",
+            $groupparams + $userparams,
+            '',
+            'id, groupid, userid'
+        );
+        foreach ($rs as $row) {
+            $memberships[(int) $row->userid][] = (int) $row->groupid;
+        }
+        $rs->close();
+
+        return $memberships;
     }
 }

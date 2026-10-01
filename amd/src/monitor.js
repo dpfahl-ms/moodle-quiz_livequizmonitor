@@ -1226,17 +1226,21 @@ class MonitorComponent extends BaseComponent {
         }
 
         let flag = timeCell.querySelector('.livequizmonitor-override-flag-timer');
-        if (student.hastimeoverride) {
-            if (!flag) {
-                const flagTitle = this.escapeHtml(this.userTimeOverrideFlagLabel);
-                timeCell.insertAdjacentHTML('beforeend',
-                    '<i class="fa-solid fa-clock livequizmonitor-override-flag livequizmonitor-override-flag-timer" ' +
-                    `title="${flagTitle}" aria-label="${flagTitle}"></i>`
-                );
-            }
-        } else if (flag) {
-            flag.remove();
+        if (!student.hastimeoverride) {
+            flag?.remove();
+            return;
         }
+
+        if (!flag) {
+            flag = document.createElement('i');
+            flag.className = 'fa-solid fa-clock livequizmonitor-override-flag livequizmonitor-override-flag-timer';
+            timeCell.append(flag);
+        }
+
+        // The label depends on whether the time override comes from a user override, a group override, or both.
+        const label = student.timeoverrideflaglabel || this.userTimeOverrideFlagLabel;
+        flag.setAttribute('title', label);
+        flag.setAttribute('aria-label', label);
     }
 
     /**

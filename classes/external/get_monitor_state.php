@@ -127,6 +127,7 @@ class get_monitor_state extends external_api {
             'hasgroupoverride' => new external_value(PARAM_BOOL, 'Student belongs to a group with an override'),
             'hasgrouptimeoverride' => new external_value(PARAM_BOOL, 'Student belongs to a group with a time-related override'),
             'hastimeoverride' => new external_value(PARAM_BOOL, 'Student has a time-related override, either user or group'),
+            'timeoverrideflaglabel' => new external_value(PARAM_TEXT, 'Tooltip for the time override badge'),
             'isblocked' => new external_value(PARAM_BOOL, 'Student blocked by onesession'),
             'unblockactionenabled' => new external_value(PARAM_BOOL, 'Unblock action enabled for viewer'),
         ]);
@@ -186,6 +187,7 @@ class get_monitor_state extends external_api {
                 'hasgroupoverride' => (bool) ($row->hasgroupoverride ?? false),
                 'hasgrouptimeoverride' => (bool) ($row->hasgrouptimeoverride ?? false),
                 'hastimeoverride' => (bool) ($row->hastimeoverride ?? false),
+                'timeoverrideflaglabel' => (string) ($row->timeoverrideflaglabel ?? ''),
                 'isblocked' => (bool) ($row->isblocked ?? false),
                 'unblockactionenabled' => (bool) ($row->unblockactionenabled ?? false),
             ];

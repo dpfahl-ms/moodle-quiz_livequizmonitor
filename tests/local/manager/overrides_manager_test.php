@@ -62,7 +62,7 @@ final class overrides_manager_test extends advanced_testcase {
         $this->resetAfterTest();
         [$course, $quiz, , $student1] = $this->create_quiz_with_students();
 
-        $map = overrides_manager::get_override_map((int) $course->id, (int) $quiz->id, [$student1->id]);
+        $map = overrides_manager::get_override_map((int) $quiz->id, [$student1->id]);
 
         $this->assertFalse($map[$student1->id]);
     }
@@ -83,7 +83,7 @@ final class overrides_manager_test extends advanced_testcase {
             'timelimit' => 1800,
         ]);
 
-        $map = overrides_manager::get_override_map((int) $course->id, (int) $quiz->id, [$student1->id, $student2->id]);
+        $map = overrides_manager::get_override_map((int) $quiz->id, [$student1->id, $student2->id]);
 
         $this->assertTrue($map[$student1->id]->hasuseroverride);
         $this->assertFalse($map[$student1->id]->hasgroupoverride);
@@ -116,7 +116,7 @@ final class overrides_manager_test extends advanced_testcase {
             $column => $value,
         ]);
 
-        $map = overrides_manager::get_override_map((int) $course->id, (int) $quiz->id, [$student1->id]);
+        $map = overrides_manager::get_override_map((int) $quiz->id, [$student1->id]);
 
         $this->assertTrue($map[$student1->id]->hasuseroverride);
         $this->assertSame($expectedhastimeoverride, $map[$student1->id]->hastimeoverride);
@@ -138,17 +138,12 @@ final class overrides_manager_test extends advanced_testcase {
     }
 
     /**
-     * KNOWN BEHAVIOUR CHANGE from the previous implementation: a
-     * quiz_overrides row with every value column null now DOES count as
-     * "has override", since get_override_map() no longer filters on
-     * VALUE_COLUMNS - it flags any row with a matching userid/groupid.
+     * A quiz_overrides row with every value column null does not count as an override.
      *
-     * This documents the current behaviour rather than asserting it is
-     * correct. Flag to the team: is this an acceptable simplification
-     * (trusting core never saves an all-null override row), or should the
-     * VALUE_COLUMNS check be reinstated in get_override_map()?
+     * Only non-null VALUE_COLUMNS are treated as overridden settings, so a null-only row
+     * leaves the student's map entry as false.
      */
-    public function test_get_override_map_all_null_row_currently_counts_as_override(): void {
+    public function test_get_override_map_all_null_row_does_not_count_as_override(): void {
         global $DB;
 
         $this->resetAfterTest();
@@ -159,10 +154,9 @@ final class overrides_manager_test extends advanced_testcase {
             'userid' => $student1->id,
         ]);
 
-        $map = overrides_manager::get_override_map((int) $course->id, (int) $quiz->id, [$student1->id]);
+        $map = overrides_manager::get_override_map((int) $quiz->id, [$student1->id]);
 
-        $this->assertTrue($map[$student1->id]->hasuseroverride);
-        $this->assertFalse($map[$student1->id]->hastimeoverride);
+        $this->assertFalse($map[$student1->id]);
     }
 
     /**
@@ -186,7 +180,7 @@ final class overrides_manager_test extends advanced_testcase {
             'timeclose' => time() + 3600,
         ]);
 
-        $map = overrides_manager::get_override_map((int) $course->id, (int) $quiz->id, [$student1->id, $student2->id]);
+        $map = overrides_manager::get_override_map((int) $quiz->id, [$student1->id, $student2->id]);
 
         $this->assertFalse($map[$student1->id]->hasuseroverride);
         $this->assertTrue($map[$student1->id]->hasgroupoverride);
@@ -219,19 +213,16 @@ final class overrides_manager_test extends advanced_testcase {
             'attempts' => 5,
         ]);
 
-        $map = overrides_manager::get_override_map((int) $course->id, (int) $quiz->id, [$student1->id, $student2->id]);
+        $map = overrides_manager::get_override_map((int) $quiz->id, [$student1->id, $student2->id]);
 
         $this->assertTrue($map[$student1->id]->hasgroupoverride);
         $this->assertFalse($map[$student2->id]);
     }
 
     /**
-     * Per the agreed precedence rule, a user override always wins: a
-     * student with both a user override AND membership in an overridden
-     * group is reported as hasuseroverride only. This holds regardless of
-     * which quiz_overrides row the DB happens to return first, since
-     * get_override_map() only writes a group-override flag when no
-     * override has been recorded for that student yet.
+     * A user override replaces a group override that sets the same settings.
+     *
+     * The group override is inserted first, so the result must not depend on row order.
      */
     public function test_get_override_map_user_override_takes_precedence_over_group(): void {
         global $DB;
@@ -243,8 +234,39 @@ final class overrides_manager_test extends advanced_testcase {
         $group = $generator->create_group(['courseid' => $course->id]);
         $generator->create_group_member(['groupid' => $group->id, 'userid' => $student1->id]);
 
-        // Insert the group override FIRST, then the user override, so a
-        // naive "first write wins" implementation would get this wrong.
+        $DB->insert_record('quiz_overrides', (object) [
+            'quiz' => $quiz->id,
+            'groupid' => $group->id,
+            'timelimit' => 1800,
+        ]);
+        $DB->insert_record('quiz_overrides', (object) [
+            'quiz' => $quiz->id,
+            'userid' => $student1->id,
+            'timelimit' => 3600,
+        ]);
+
+        $map = overrides_manager::get_override_map((int) $quiz->id, [$student1->id]);
+
+        $this->assertTrue($map[$student1->id]->hasuseroverride);
+        $this->assertFalse($map[$student1->id]->hasgroupoverride);
+        $this->assertTrue($map[$student1->id]->hastimeoverride);
+    }
+
+    /**
+     * A user override only takes precedence for the settings it overrides.
+     *
+     * A group time limit still applies when the user override sets only attempts.
+     */
+    public function test_get_override_map_group_applies_to_settings_not_in_user_override(): void {
+        global $DB;
+
+        $this->resetAfterTest();
+        $generator = $this->getDataGenerator();
+        [$course, $quiz, , $student1] = $this->create_quiz_with_students();
+
+        $group = $generator->create_group(['courseid' => $course->id]);
+        $generator->create_group_member(['groupid' => $group->id, 'userid' => $student1->id]);
+
         $DB->insert_record('quiz_overrides', (object) [
             'quiz' => $quiz->id,
             'groupid' => $group->id,
@@ -256,15 +278,71 @@ final class overrides_manager_test extends advanced_testcase {
             'attempts' => 3,
         ]);
 
-        $map = overrides_manager::get_override_map((int) $course->id, (int) $quiz->id, [$student1->id]);
+        $map = overrides_manager::get_override_map((int) $quiz->id, [$student1->id]);
 
         $this->assertTrue($map[$student1->id]->hasuseroverride);
-        $this->assertFalse($map[$student1->id]->hasgroupoverride);
+        $this->assertTrue($map[$student1->id]->hasgroupoverride);
+        $this->assertTrue($map[$student1->id]->hastimeoverride);
+        $this->assertFalse($map[$student1->id]->hasusertimeoverride);
+        $this->assertTrue($map[$student1->id]->hasgrouptimeoverride);
+    }
 
-        // The group override was time-related, but since it's suppressed by
-        // precedence, hastimeoverride should NOT fire from it. The user
-        // override (attempts-only) is also not time-related, so overall false.
-        $this->assertFalse($map[$student1->id]->hastimeoverride);
+    /**
+     * The time-override flag is set when only one of a student's groups overrides time.
+     *
+     * The non-time group override is inserted first, so the result must not depend on row order.
+     */
+    public function test_get_override_map_combines_settings_across_groups(): void {
+        global $DB;
+
+        $this->resetAfterTest();
+        $generator = $this->getDataGenerator();
+        [$course, $quiz, , $student1] = $this->create_quiz_with_students();
+
+        $attemptsgroup = $generator->create_group(['courseid' => $course->id]);
+        $timegroup = $generator->create_group(['courseid' => $course->id]);
+        $generator->create_group_member(['groupid' => $attemptsgroup->id, 'userid' => $student1->id]);
+        $generator->create_group_member(['groupid' => $timegroup->id, 'userid' => $student1->id]);
+
+        $DB->insert_record('quiz_overrides', (object) [
+            'quiz' => $quiz->id,
+            'groupid' => $attemptsgroup->id,
+            'attempts' => 3,
+        ]);
+        $DB->insert_record('quiz_overrides', (object) [
+            'quiz' => $quiz->id,
+            'groupid' => $timegroup->id,
+            'timelimit' => 1800,
+        ]);
+
+        $map = overrides_manager::get_override_map((int) $quiz->id, [$student1->id]);
+
+        $this->assertFalse($map[$student1->id]->hasuseroverride);
+        $this->assertTrue($map[$student1->id]->hasgroupoverride);
+        $this->assertTrue($map[$student1->id]->hastimeoverride);
+    }
+
+    /**
+     * An override value of 0 (e.g. "no time limit") is a genuine override.
+     *
+     * Core stores null for settings that are not overridden, so only null is ignored.
+     */
+    public function test_get_override_map_zero_value_counts_as_override(): void {
+        global $DB;
+
+        $this->resetAfterTest();
+        [$course, $quiz, , $student1] = $this->create_quiz_with_students();
+
+        $DB->insert_record('quiz_overrides', (object) [
+            'quiz' => $quiz->id,
+            'userid' => $student1->id,
+            'timelimit' => 0,
+        ]);
+
+        $map = overrides_manager::get_override_map((int) $quiz->id, [$student1->id]);
+
+        $this->assertTrue($map[$student1->id]->hasuseroverride);
+        $this->assertTrue($map[$student1->id]->hastimeoverride);
     }
 
     /**
@@ -274,12 +352,12 @@ final class overrides_manager_test extends advanced_testcase {
         $this->resetAfterTest();
         [$course, $quiz] = $this->create_quiz_with_students();
 
-        $this->assertSame([], overrides_manager::get_override_map((int) $course->id, (int) $quiz->id, []));
+        $this->assertSame([], overrides_manager::get_override_map((int) $quiz->id, []));
     }
 
     /**
      * No groups in the course at all: user overrides are still detected,
-     * and nothing errors when groups_get_all_groups() returns empty.
+     * and nothing errors when there are no group memberships to look up.
      */
     public function test_get_override_map_no_groups_in_course(): void {
         global $DB;
@@ -293,7 +371,7 @@ final class overrides_manager_test extends advanced_testcase {
             'timelimit' => 1800,
         ]);
 
-        $map = overrides_manager::get_override_map((int) $course->id, (int) $quiz->id, [$student1->id]);
+        $map = overrides_manager::get_override_map((int) $quiz->id, [$student1->id]);
 
         $this->assertTrue($map[$student1->id]->hasuseroverride);
     }

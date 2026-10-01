@@ -26,10 +26,11 @@
         "hasuseroverride": false,
         "useroverrideflaglabel": "This student has a user override",
         "hasgroupoverride": false,
-        "groupoverrideflaglabel": "This student belongs to a group with an override",
+        "groupoverrideflaglabel": "This student has a group override",
         "hasusertimeoverride": false,
+        "hasgrouptimeoverride": false,
         "hastimeoverride": false,
-        "usertimeoverrideflaglabel": "This student has a time-related override",
+        "timeoverrideflaglabel": "This student has a time-related user override",
         "canextend": true,
         "extendrowlabel": "Extend time",
         "extendactionenabled": true,
@@ -81,8 +82,8 @@
         {{/hastimer}}
         {{#hastimeoverride}}
         <i class="fa-solid fa-clock livequizmonitor-override-flag livequizmonitor-override-flag-timer"
-           title="{{usertimeoverrideflaglabel}}"
-           aria-label="{{usertimeoverrideflaglabel}}"></i>
+           title="{{timeoverrideflaglabel}}"
+           aria-label="{{timeoverrideflaglabel}}"></i>
         {{/hastimeoverride}}
     </td>
     {{#showactionscolumn}}

@@ -230,11 +230,11 @@ final class get_monitor_state_test extends advanced_testcase {
             'timeclose' => time() + 3600,
         ]);
 
-        // Student1 also has a user override, which should take precedence.
+        // Student1's user override sets the same setting, so it replaces the group override.
         $DB->insert_record('quiz_overrides', (object) [
             'quiz' => $quiz->id,
             'userid' => $student1->id,
-            'password' => 'secret',
+            'timeclose' => time() + 7200,
         ]);
 
         $this->setUser($teacher);
@@ -248,10 +248,11 @@ final class get_monitor_state_test extends advanced_testcase {
         $this->assertSame(1, $result['useroverridecount']);
         $this->assertSame(1, $result['groupoverridecount']);
 
-        // Student1: user override wins, group override is suppressed.
+        // Student1: the user override replaces the group override.
         $this->assertTrue($bystudent[$student1->id]['hasuseroverride']);
         $this->assertFalse($bystudent[$student1->id]['hasgroupoverride']);
-        $this->assertFalse($bystudent[$student1->id]['hasusertimeoverride']); // Password isn't time-related.
+        $this->assertTrue($bystudent[$student1->id]['hasusertimeoverride']);
+        $this->assertFalse($bystudent[$student1->id]['hasgrouptimeoverride']);
 
         // Student2: only the group override applies.
         $this->assertFalse($bystudent[$student2->id]['hasuseroverride']);

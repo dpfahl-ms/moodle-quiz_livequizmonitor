@@ -734,10 +734,12 @@ final class monitor_manager_test extends advanced_testcase {
         $generator->create_group_member(['groupid' => $group->id, 'userid' => $student->id]);
 
         // The student has BOTH a user override and belongs to an overridden group.
+        // Both overrides are time-related, but the user override should take precedence
+        // and the group override should be ignored for this student.
         $DB->insert_record('quiz_overrides', (object) [
             'quiz' => $quiz->id,
             'userid' => $student->id,
-            'attempts' => 3,
+            'timelimit' => 3600,
         ]);
         $DB->insert_record('quiz_overrides', (object) [
             'quiz' => $quiz->id,
@@ -751,13 +753,11 @@ final class monitor_manager_test extends advanced_testcase {
         $this->assertSame(0, $state->groupoverridecount);
 
         $row = $state->students[0];
+        $this->assertTrue($row->hastimeoverride);
         $this->assertTrue($row->hasuseroverride);
+        $this->assertTrue($row->hasusertimeoverride);
+
         $this->assertFalse($row->hasgroupoverride);
         $this->assertFalse($row->hasgrouptimeoverride);
-
-        // The group override was time-related, but since it's suppressed by
-        // precedence, hastimeoverride should NOT fire from it. The user
-        // override (attempts-only) is also not time-related, so overall false.
-        $this->assertFalse($row->hastimeoverride);
     }
 }
