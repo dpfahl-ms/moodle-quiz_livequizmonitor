@@ -25,6 +25,8 @@
 defined('MOODLE_INTERNAL') || die();
 
 $string['attempts:showlabel'] = 'Versuche anzeigen';
+$string['columns:hidecolumn'] = 'Spalte „{$a}“ ausblenden';
+$string['columns:showcolumn'] = 'Spalte „{$a}“ einblenden';
 $string['emptycohort'] = 'Für dieses Quiz wurden keine berechtigten Teilnehmenden gefunden.';
 $string['error:groupnotvisible'] = 'Sie haben keine Berechtigung, diese Gruppe in diesem Monitor anzuzeigen.';
 $string['error:usernotvisible'] = 'Die ausgewählte Person ist in dieser Monitor-Ansicht nicht sichtbar.';
@@ -92,6 +94,8 @@ $string['privacy:metadata:notes:content'] = 'Der Notiztext.';
 $string['privacy:metadata:notes:timemodified'] = 'Zeitpunkt der letzten Änderung.';
 $string['privacy:metadata:notes:userid'] = 'Die Person, auf die sich die Notiz bezieht.';
 $string['privacy:metadata:notes:usermodified'] = 'Die Person, die die Notiz zuletzt bearbeitet hat.';
+$string['privacy:metadata:preference:hiddencolumns'] = 'Die Tabellenspalten des Live-Monitors, die Sie ausgeblendet haben.';
+$string['privacy:metadata:preference:hiddencolumns_desc'] = 'Ausgeblendete Spalten des Live-Monitors: {$a}';
 $string['progressanswered'] = '{$a->answered} von {$a->total} beantwortet';
 $string['showpassword:label'] = 'Quiz-Passwort anzeigen';
 $string['showpassword:modaltitle'] = 'Quiz-Passwort';

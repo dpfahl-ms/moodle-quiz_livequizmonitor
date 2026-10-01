@@ -48,22 +48,22 @@ Feature: Sort students in Live Quiz Monitor
       | Name C |
       | Name A |
 
-    # Click on the "email" column header.
-    When I click on "th[data-sort-column='email']" "css_element"
+    # Click on the "email" column sort control (not the hide/show toggle).
+    When I click on "th[data-sort-column='email'] [data-action='sort-column']" "css_element"
     Then the following students should appear in order:
       | Name C |
       | Name A |
       | Name B |
 
-    # Click on the "progress" column header.
-    When I click on "th[data-sort-column='progress']" "css_element"
+    # Click on the "progress" column sort control.
+    When I click on "th[data-sort-column='progress'] [data-action='sort-column']" "css_element"
     Then the following students should appear in order:
       | Name C |
       | Name B |
       | Name A |
 
-    # Click on the "progress" column header again to reverse the order.
-    When I click on "th[data-sort-column='progress']" "css_element"
+    # Click on the "progress" column sort control again to reverse the order.
+    When I click on "th[data-sort-column='progress'] [data-action='sort-column']" "css_element"
     Then the following students should appear in order:
       | Name A |
       | Name B |

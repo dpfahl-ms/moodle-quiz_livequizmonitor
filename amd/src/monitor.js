@@ -26,6 +26,11 @@ import Notification from 'core/notification';
 import Templates from 'core/templates';
 import {BaseComponent} from 'core/reactive';
 import {matchesFilters, countVisible} from 'quiz_livequizmonitor/filter_utils';
+import {
+    parseHiddenColumns,
+    applyColumnVisibility,
+    saveHiddenColumns,
+} from 'quiz_livequizmonitor/column_visibility';
 import {createMonitorReactive, formatDuration} from 'quiz_livequizmonitor/reactive/monitor_state';
 import {showPasswordModal} from 'quiz_livequizmonitor/show_password_modal';
 import {showExtendModal} from 'quiz_livequizmonitor/extend_time_modal';
@@ -65,6 +70,7 @@ class MonitorComponent extends BaseComponent {
             EMPTYCOHORT: '[data-region="empty-cohort"]',
             SUMMARYTILE: '.livequizmonitor-summary-tile',
             EXTENDBULK: '[data-action="extend-bulk"]',
+            COLUMNTOGGLE: '[data-action="toggle-column"]',
             SHOWPASSWORD: '[data-action="show-password"]',
         };
         this.pollTimer = null;
@@ -100,6 +106,7 @@ class MonitorComponent extends BaseComponent {
         this.canunblock = root.dataset.canunblock === '1';
         this.unblockRowLabel = root.dataset.unblockLabel ?? 'Unblock user';
         this.blockedFlagLabel = root.dataset.blockedFlagLabel ?? 'Blocked';
+        this.hiddenColumns = parseHiddenColumns(root);
         this.userOverrideFlagLabel = root.dataset.useroverrideFlagLabel ?? 'Has extension';
         this.userTimeOverrideFlagLabel = root.dataset.usertimeoverrideFlagLabel ?? 'Time-related override';
         this.showAttemptsLabel = root.dataset.showAttemptsLabel ?? 'Show attempts';
@@ -173,11 +180,62 @@ class MonitorComponent extends BaseComponent {
         this.bindSortEvents();
         this.bindExtendEvents();
         this.bindNoteEvents();
+        this.bindColumnToggleEvents();
         this.startPolling();
         this.startTimerTick();
         this.renderCohortLayout();
         this.renderFilterToolbar();
         this.renderBulkExtendButton();
+        this.renderColumnVisibility();
+    }
+
+    /**
+     * Bind clicks on the per-column +/- hide/show toggle buttons.
+     */
+    bindColumnToggleEvents() {
+        this.addEventListener(this.element, 'click', this.handleColumnToggleClick);
+    }
+
+    /**
+     * Toggle a column's hidden state, reflect it immediately, and persist it.
+     *
+     * @param {Event} event
+     */
+    handleColumnToggleClick(event) {
+        const button = event.target.closest(this.selectors.COLUMNTOGGLE);
+        if (!button || !this.element.contains(button)) {
+            return;
+        }
+        event.preventDefault();
+        event.stopPropagation();
+
+        const column = button.dataset.column;
+        if (!column) {
+            return;
+        }
+
+        if (this.hiddenColumns.has(column)) {
+            this.hiddenColumns.delete(column);
+        } else {
+            this.hiddenColumns.add(column);
+        }
+
+        this.renderColumnVisibility();
+
+        saveHiddenColumns(this.cmid, this.hiddenColumns).catch((e) => {
+            Notification.exception(e);
+        });
+    }
+
+    /**
+     * Re-apply hidden-column state to every column-aware element in the table.
+     *
+     * Called on init, after a toggle click, and after every reactive row
+     * sync so newly inserted rows immediately respect the current
+     * preference too.
+     */
+    renderColumnVisibility() {
+        applyColumnVisibility(this.element, this.hiddenColumns);
     }
 
     /**
@@ -531,6 +589,11 @@ class MonitorComponent extends BaseComponent {
      * @param {Event} event
      */
     handleSortClick(event) {
+        // Ignore clicks on the column hide/show toggle nested in the header.
+        if (event.target.closest(this.selectors.COLUMNTOGGLE)) {
+            return;
+        }
+
         const trigger = event.target.closest('[data-action="sort-column"]');
 
         if (!trigger || !this.element.contains(trigger)) {
@@ -946,6 +1009,7 @@ class MonitorComponent extends BaseComponent {
 
             this.applyRowVisibility();
             this.renderFilterEmpty();
+            this.renderColumnVisibility();
         } finally {
             this.syncInFlight = false;
             if (this.syncQueued) {
@@ -1110,7 +1174,7 @@ class MonitorComponent extends BaseComponent {
         }
 
         const headers = table.querySelectorAll(
-            'th[data-action="sort-column"]'
+            'th[data-sort-column]'
         );
 
         headers.forEach((header) => {
