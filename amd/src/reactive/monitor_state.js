@@ -76,6 +76,7 @@ export const createInitialState = () => ({
         filters: {
             search: '',
             status: 'all',
+            useroverride: false,
         },
         sortcolumn: 'status',
         sortdirection: 'asc',
@@ -84,6 +85,8 @@ export const createInitialState = () => ({
         idlecount: 0,
         onesessionactive: false,
         canunblock: false,
+        canviewoverrides: false,
+        useroverridecount: 0,
         canviewattempts: false,
         canviewlogs: false,
     },
@@ -138,6 +141,12 @@ class MonitorMutations {
         }
         if (payload.canunblock !== undefined) {
             stateManager.state.meta.canunblock = payload.canunblock;
+        }
+        if (payload.canviewoverrides !== undefined) {
+            stateManager.state.meta.canviewoverrides = payload.canviewoverrides;
+        }
+        if (payload.useroverridecount !== undefined) {
+            stateManager.state.meta.useroverridecount = payload.useroverridecount;
         }
         if (payload.canviewattempts !== undefined) {
             stateManager.state.meta.canviewattempts = payload.canviewattempts;
@@ -225,7 +234,24 @@ class MonitorMutations {
     }
 
     /**
-     * Reset search and status filters to defaults.
+     * Toggle a boolean flag filter (e.g. "useroverride"). Independent of
+     * the status filter - flags and status can both be active at once.
+     *
+     * @param {StateManager} stateManager
+     * @param {string} flag Flag key in meta.filters (e.g. "useroverride")
+     */
+    setFlagFilter(stateManager, flag) {
+        if (!Object.prototype.hasOwnProperty.call(stateManager.state.meta.filters, flag)) {
+            return;
+        }
+        stateManager.setReadOnly(false);
+        const current = stateManager.state.meta.filters[flag];
+        stateManager.state.meta.filters[flag] = !current;
+        stateManager.setReadOnly(true);
+    }
+
+    /**
+     * Reset search, status, and flag filters to defaults.
      *
      * @param {StateManager} stateManager
      */
@@ -233,6 +259,7 @@ class MonitorMutations {
         stateManager.setReadOnly(false);
         stateManager.state.meta.filters.search = '';
         stateManager.state.meta.filters.status = 'all';
+        stateManager.state.meta.filters.useroverride = false;
         stateManager.setReadOnly(true);
     }
 

@@ -35,7 +35,7 @@ export const normaliseSearch = (value) => {
  * Whether a student row matches the active filter state.
  *
  * @param {object} student Student row from reactive state
- * @param {object} filters Filter state {search, status}
+ * @param {object} filters Filter state {search, status, useroverride}
  * @returns {boolean}
  */
 export const matchesFilters = (student, filters) => {
@@ -43,6 +43,10 @@ export const matchesFilters = (student, filters) => {
     const status = filters?.status ?? 'all';
 
     if (status !== 'all' && student.status !== status) {
+        return false;
+    }
+
+    if (filters?.useroverride && !student.hasuseroverride) {
         return false;
     }
 
