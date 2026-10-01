@@ -15,10 +15,14 @@
         "noteseditlabel": "Edit note",
         "unblocklabel": "Unblock",
         "blockedflaglabel": "Blocked",
+        "showattemptslabel": "Show attempts",
+        "showlogslabel": "Show logs",
         "actionsmenulabel": "Actions",
         "canextend": true,
         "onesessionactive": false,
         "canunblock": false,
+        "canviewattempts": true,
+        "canviewlogs": true,
         "quizname": "Midterm quiz",
         "liveindicator": "Live",
         "updatedattext": "Last updated: 12:00",
@@ -41,35 +45,84 @@
             "chips": []
         },
         "filterempty": "No students match the current filters.",
-        "tableheaders": {
-            "status": "Status",
-            "student": "Student",
-            "email": "Email",
-            "progress": "Progress",
-            "timeremaining": "Time remaining",
-            "actions": "Actions"
-        },
+        "tableheaders": [
+            {
+                "label": "Status",
+                "sortcolumn": "status",
+                "active": true,
+                "sorticon": "fa-arrow-up-short-wide",
+                "sortlabel": "Ascending",
+                "sortclass": "text-primary",
+                "sortbylabel": "Sort by Status"
+            },
+            {
+                "label": "Student",
+                "sortcolumn": "fullname",
+                "active": false,
+                "sorticon": "fa-arrow-up-short-wide",
+                "sortlabel": "Sort by Student",
+                "sortclass": "text-secondary",
+                "sortbylabel": "Sort by Student"
+            },
+            {
+                "label": "Email",
+                "sortcolumn": "email",
+                "active": false,
+                "sorticon": "fa-arrow-up-short-wide",
+                "sortlabel": "Sort by Email",
+                "sortclass": "text-secondary",
+                "sortbylabel": "Sort by Email"
+            },
+            {
+                "label": "Progress",
+                "sortcolumn": "progress",
+                "active": false,
+                "sorticon": "fa-arrow-up-short-wide",
+                "sortlabel": "Sort by Progress",
+                "sortclass": "text-secondary",
+                "sortbylabel": "Sort by Progress"
+            },
+            {
+                "label": "Time remaining",
+                "sortcolumn": "timeremaining",
+                "active": false,
+                "sorticon": "fa-arrow-up-short-wide",
+                "sortlabel": "Sort by Time remaining",
+                "sortclass": "text-secondary",
+                "sortbylabel": "Sort by Time remaining"
+            }
+        ],
+        "actionscolumnlabel": "Actions",
+        "sortascending": "Ascending",
+        "sortdescending": "Descending",
         "students": []
     }
 }}
 <div class="livequizmonitor-root" data-region="live-quiz-monitor"
      data-cmid="{{cmid}}"
      data-groupid="{{groupid}}"
+     data-courseid="{{courseid}}"
      data-show-email="{{#showemailcolumn}}1{{/showemailcolumn}}{{^showemailcolumn}}0{{/showemailcolumn}}"
      data-show-actions="{{#showactionscolumn}}1{{/showactionscolumn}}{{^showactionscolumn}}0{{/showactionscolumn}}"
      data-lastupdated-prefix="{{lastupdatedprefix}}"
+     data-sort-ascending="{{sortascending}}"
+     data-sort-descending="{{sortdescending}}"
      data-extend-row-label="{{extendrowlabel}}"
      data-notes-add-label="{{notesaddlabel}}"
      data-notes-edit-label="{{noteseditlabel}}"
      data-unblock-label="{{unblocklabel}}"
      data-blocked-flag-label="{{blockedflaglabel}}"
+     data-show-attempts-label="{{showattemptslabel}}"
+     data-show-logs-label="{{showlogslabel}}"
      data-useroverride-flag-label="{{useroverrideflaglabel}}"
      data-usertimeoverride-flag-label="{{usertimeoverrideflaglabel}}"
      data-groupoverride-flag-label="{{groupoverrideflaglabel}}"
      data-actions-menu-label="{{actionsmenulabel}}"
      data-canextend="{{#canextend}}1{{/canextend}}{{^canextend}}0{{/canextend}}"
      data-onesession-active="{{#onesessionactive}}1{{/onesessionactive}}{{^onesessionactive}}0{{/onesessionactive}}"
-     data-canunblock="{{#canunblock}}1{{/canunblock}}{{^canunblock}}0{{/canunblock}}">
+     data-canunblock="{{#canunblock}}1{{/canunblock}}{{^canunblock}}0{{/canunblock}}"
+     data-canviewattempts="{{#canviewattempts}}1{{/canviewattempts}}{{^canviewattempts}}0{{/canviewattempts}}"
+     data-canviewlogs="{{#canviewlogs}}1{{/canviewlogs}}{{^canviewlogs}}0{{/canviewlogs}}">
 
     <div class="livequizmonitor-header d-flex flex-wrap align-items-center justify-content-between mb-3">
         <div>
@@ -80,6 +133,13 @@
             </div>
         </div>
         <div class="livequizmonitor-header-actions d-flex align-items-center gap-2">
+            {{#quizpassword}}
+            <button type="button"
+                    class="btn btn-dark"
+                    data-action="show-password">
+                {{showpasswordlabel}}
+            </button>
+            {{/quizpassword}}
             {{#canextend}}
             <button type="button"
                     class="btn btn-primary"

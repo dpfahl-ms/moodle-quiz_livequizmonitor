@@ -65,6 +65,7 @@
 }
 
 .livequizmonitor-table .badge {
+    line-height: inherit;
     min-width: 6rem;
 }
 
@@ -226,10 +227,6 @@
     display: none;
 }
 
-.livequizmonitor-row-actions .dropdown-item .fa-clock {
-    margin-right: 0.5rem;
-}
-
 .livequizmonitor-row-actions .menu-action-text {
     vertical-align: middle;
 }
@@ -239,8 +236,11 @@
     opacity: 0.55;
 }
 
-.livequizmonitor-row-actions .dropdown-item .fa-book {
+/* Fixed-width leading icons so all action labels share the same left edge. */
+.livequizmonitor-row-actions .dropdown-item > .fa-solid:first-child {
+    width: 1.25em;
     margin-right: 0.5rem;
+    text-align: center;
 }
 
 .livequizmonitor-note-modal-body textarea {

@@ -24,13 +24,14 @@
 
 defined('MOODLE_INTERNAL') || die();
 
+$string['attempts:showlabel'] = 'Show attempts';
 $string['emptycohort'] = 'No eligible students were found for this quiz.';
 $string['error:groupnotvisible'] = 'You do not have permission to view that group in this monitor.';
 $string['error:usernotvisible'] = 'The selected student is not visible in this monitor view.';
 $string['extend:addtime'] = 'Add time';
 $string['extend:bulklabel'] = 'Extend time';
 $string['extend:confirm'] = 'Confirm — add {$a} min';
-$string['extend:errornoinprogress'] = 'No students are currently in progress.';
+$string['extend:errornoinprogress'] = 'No students are currently in progress (or idle).';
 $string['extend:errornopermission'] = 'You do not have permission to extend quiz time.';
 $string['extend:mineach'] = '+{$a} min each';
 $string['extend:modalbodybulk'] = 'Add time to all {$a->count} students currently taking the quiz. The quiz close time stays the same.';
@@ -63,6 +64,7 @@ $string['liveindicator'] = 'Live';
 $string['livequizmonitor'] = 'Live monitor';
 $string['livequizmonitor:view'] = 'View the live quiz monitor report';
 $string['livequizmonitorreport'] = 'Live monitor';
+$string['logs:showlabel'] = 'Show logs';
 $string['message:timeextendedbody'] = 'Your teacher added {$a->minutes} minutes to your attempt for the quiz "{$a->quizname}".';
 $string['message:timeextendedsmall'] = '+{$a} min added to your quiz attempt';
 $string['message:timeextendedsubject'] = 'Extra time granted for {$a}';
@@ -98,11 +100,16 @@ $string['privacy:metadata:notes:timemodified'] = 'When the note was last modifie
 $string['privacy:metadata:notes:userid'] = 'The student the note is about.';
 $string['privacy:metadata:notes:usermodified'] = 'The user who last edited the note.';
 $string['progressanswered'] = '{$a->answered} of {$a->total} answered';
+$string['showpassword:label'] = 'Show quiz password';
+$string['showpassword:modaltitle'] = 'Quiz password';
+$string['sortby'] = 'Sort by {$a}';
 $string['staleindicator'] = 'Updates paused — showing last known data';
 $string['status:completed'] = 'Completed';
+$string['status:idle'] = 'Idle';
 $string['status:inprogress'] = 'In progress';
 $string['status:notstarted'] = 'Not started';
 $string['summary:completed'] = 'Completed';
+$string['summary:idle'] = 'Idle';
 $string['summary:inprogress'] = 'In progress';
 $string['summary:notstarted'] = 'Not started';
 $string['table:actions'] = 'Actions';

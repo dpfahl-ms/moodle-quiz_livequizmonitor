@@ -43,31 +43,90 @@ class monitor_renderer extends plugin_renderer_base {
         $updated = userdate($state->updatedat, get_string('strftimetime', 'langconfig'));
         $canextend = !empty($state->canextend);
         $inprogresscount = (int) ($state->inprogresscount ?? $state->summary->inprogress->count);
+        $idlecount = (int) ($state->idlecount ?? $state->summary->idle->count);
         $onesessionactive = !empty($state->onesessionactive);
         $canunblock = !empty($state->canunblock);
+        $canviewattempts = !empty($state->canviewattempts);
+        $canviewlogs = !empty($state->canviewlogs);
+
+        // Define labels for sortable table headers.
+        $headers = [
+            'status' => get_string('table:status', 'quiz_livequizmonitor'),
+            'student' => get_string('table:student', 'quiz_livequizmonitor'),
+            'email' => get_string('table:email', 'quiz_livequizmonitor'),
+            'progress' => get_string('table:progress', 'quiz_livequizmonitor'),
+            'timeremaining' => get_string('table:timeremaining', 'quiz_livequizmonitor'),
+        ];
+
+        // If the first student does not have an email address, hide the email column.
+        if (empty($state->students) || empty($state->students[0]->showemail)) {
+            unset($headers['email']);
+            $showemailcolumn = false;
+        } else {
+            $showemailcolumn = true;
+        }
+
+        $tableheaders = [];
+
+        foreach ($headers as $header => $label) {
+            $sortcolumn = $header === 'student' ? 'fullname' : $header;
+            $active = $sortcolumn === $state->sortcolumn;
+
+            if ($active && $state->sortdirection === 'desc') {
+                $sortlabel = get_string('desc');
+                $sorticon = 'fa-arrow-down-short-wide';
+            } else {
+                $sortlabel = get_string('asc');
+                $sorticon = 'fa-arrow-up-short-wide';
+            }
+            $sortbylabel = get_string('sortby', 'quiz_livequizmonitor', $label);
+
+            if ($active) {
+                $sortclass = 'text-primary';
+            } else {
+                $sortclass = 'text-secondary';
+                $sortlabel = $sortbylabel;
+            }
+
+            $tableheaders[] = [
+                'label' => $label,
+                'sortcolumn' => $sortcolumn,
+                'active' => $active,
+                'sorticon' => $sorticon,
+                'sortlabel' => $sortlabel,
+                'sortclass' => $sortclass,
+                'sortbylabel' => $sortbylabel,
+            ];
+        }
 
         $students = [];
         foreach ($state->students as $row) {
             $student = (array) $row;
-            $student['extendactionenabled'] = $canextend && $row->status === monitor_manager::STATUS_INPROGRESS;
+            $student['cmid'] = $state->cmid;
+            $student['courseid'] = $state->courseid;
+            $student['extendactionenabled'] = $canextend && in_array($row->status, monitor_manager::INPROGRESS_OR_IDLE, true);
             $student['canextend'] = $canextend;
             $student['onesessionactive'] = $onesessionactive;
             $student['canunblock'] = $canunblock;
+            $student['canviewattempts'] = $canviewattempts;
+            $student['canviewlogs'] = $canviewlogs;
             $student['notelabel'] = !empty($row->hasnote)
                 ? get_string('notes:editlabel', 'quiz_livequizmonitor')
                 : get_string('notes:addlabel', 'quiz_livequizmonitor');
+            // Perhaps these label don't need to be passed with every student?
             $student['extendrowlabel'] = get_string('extend:rowaction', 'quiz_livequizmonitor');
             $student['unblocklabel'] = get_string('onesession:unblocklabel', 'quiz_livequizmonitor');
             $student['blockedflaglabel'] = get_string('onesession:blockedflag', 'quiz_livequizmonitor');
+            $student['showattemptslabel'] = get_string('attempts:showlabel', 'quiz_livequizmonitor');
+            $student['showlogslabel'] = get_string('logs:showlabel', 'quiz_livequizmonitor');
             $student['useroverrideflaglabel'] = get_string('filter:useroverrideflag', 'quiz_livequizmonitor');
             $student['usertimeoverrideflaglabel'] = get_string('filter:usertimeoverrideflag', 'quiz_livequizmonitor');
             $student['groupoverrideflaglabel'] = get_string('filter:groupoverrideflag', 'quiz_livequizmonitor');
             $students[] = $student;
         }
-
         return [
-            'cmid' => $state->cmid,
             'quizname' => $state->quizname,
+            'quizpassword' => $state->quizpassword,
             'totalstudents' => $state->totalstudents,
             'hasstudents' => (bool) $state->hasstudents,
             'updatedat' => $state->updatedat,
@@ -77,35 +136,39 @@ class monitor_renderer extends plugin_renderer_base {
             'staleindicator' => get_string('staleindicator', 'quiz_livequizmonitor'),
             'emptycohort' => get_string('emptycohort', 'quiz_livequizmonitor'),
             'groupid' => $groupid,
+            'cmid' => $state->cmid,
+            'courseid' => $state->courseid,
             'summary' => (array) $state->summary,
             'students' => $students,
             'canextend' => $canextend,
             'onesessionactive' => $onesessionactive,
             'canunblock' => $canunblock,
+            'canviewattempts' => $canviewattempts,
+            'canviewlogs' => $canviewlogs,
             'inprogresscount' => $inprogresscount,
-            'bulkextenddisabled' => $inprogresscount === 0,
+            'idlecount' => $idlecount,
+            'showpasswordlabel' => get_string('showpassword:label', 'quiz_livequizmonitor'),
+            'bulkextenddisabled' => ($inprogresscount + $idlecount) === 0,
             'bulkextendlabel' => get_string('extend:bulklabel', 'quiz_livequizmonitor'),
             'extendrowlabel' => get_string('extend:rowaction', 'quiz_livequizmonitor'),
             'notesaddlabel' => get_string('notes:addlabel', 'quiz_livequizmonitor'),
             'noteseditlabel' => get_string('notes:editlabel', 'quiz_livequizmonitor'),
             'unblocklabel' => get_string('onesession:unblocklabel', 'quiz_livequizmonitor'),
             'blockedflaglabel' => get_string('onesession:blockedflag', 'quiz_livequizmonitor'),
+            'showattemptslabel' => get_string('attempts:showlabel', 'quiz_livequizmonitor'),
+            'showlogslabel' => get_string('logs:showlabel', 'quiz_livequizmonitor'),
             'useroverrideflaglabel' => get_string('filter:useroverrideflag', 'quiz_livequizmonitor'),
             'usertimeoverrideflaglabel' => get_string('filter:usertimeoverrideflag', 'quiz_livequizmonitor'),
             'groupoverrideflaglabel' => get_string('filter:groupoverrideflag', 'quiz_livequizmonitor'),
             'actionsmenulabel' => get_string('actions'),
-            'tableheaders' => [
-                'status' => get_string('table:status', 'quiz_livequizmonitor'),
-                'student' => get_string('table:student', 'quiz_livequizmonitor'),
-                'email' => get_string('table:email', 'quiz_livequizmonitor'),
-                'progress' => get_string('table:progress', 'quiz_livequizmonitor'),
-                'timeremaining' => get_string('table:timeremaining', 'quiz_livequizmonitor'),
-                'actions' => get_string('table:actions', 'quiz_livequizmonitor'),
-            ],
-            'showemailcolumn' => !empty($state->students) && !empty($state->students[0]->showemail),
-            'showactionscolumn' => true,
+            'tableheaders' => $tableheaders,
+            'showemailcolumn' => $showemailcolumn,
+            'showactionscolumn' => true, // Always show Actions column.
+            'actionscolumnlabel' => get_string('table:actions', 'quiz_livequizmonitor'),
             'filter' => $this->export_filter_context($state),
             'filterempty' => get_string('filter:empty', 'quiz_livequizmonitor'),
+            'sortascending' => get_string('asc'),
+            'sortdescending' => get_string('desc'),
         ];
     }
 
@@ -136,6 +199,12 @@ class monitor_renderer extends plugin_renderer_base {
                     'status' => 'notstarted',
                     'label' => get_string('status:notstarted', 'quiz_livequizmonitor'),
                     'count' => $summary->notstarted->count,
+                    'active' => false,
+                ],
+                [
+                    'status' => 'idle',
+                    'label' => get_string('status:idle', 'quiz_livequizmonitor'),
+                    'count' => $summary->idle->count,
                     'active' => false,
                 ],
                 [

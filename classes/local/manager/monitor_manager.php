@@ -43,8 +43,17 @@ class monitor_manager {
     /** @var string Monitor status: in progress. */
     public const STATUS_INPROGRESS = 'inprogress';
 
+    /** @var string Monitor status: idle.
+     *
+     * Similar to "inprogress" but no user activity within the last 5 minutes.
+     */
+    public const STATUS_IDLE = 'idle';
+
     /** @var string Monitor status: completed. */
     public const STATUS_COMPLETED = 'completed';
+
+    /** @var string[] Convenient array of in-progress and idle statuses. */
+    public const INPROGRESS_OR_IDLE = [self::STATUS_INPROGRESS, self::STATUS_IDLE];
 
     /**
      * Quiz attempt state used on modified Moodle 4.5 and Moodle 5+.
@@ -53,6 +62,9 @@ class monitor_manager {
      * literal so we can match DB rows without referencing a missing constant.
      */
     public const QUIZ_ATTEMPT_SUBMITTED = 'submitted';
+
+    /** @var int Idle threshold in seconds. 300 secs = 5 mins. */
+    public const IDLE_THRESHOLD_SECONDS = 300;
 
     /**
      * Moodle attempt states that map to monitor "completed".
@@ -89,19 +101,43 @@ class monitor_manager {
     }
 
     /**
+     * Whether a raw attempt state string is completed.
+     *
+     * @param string $state Attempt state from quiz_attempts.state.
+     * @return bool
+     */
+    public static function is_completed_attempt_state(string $state): bool {
+        return in_array($state, self::completed_attempt_states(), true);
+    }
+
+    /**
      * Build the full monitor state for a quiz module.
      *
      * @param stdClass $course Course record.
      * @param cm_info|stdClass $cm Course module record or cached cm_info.
      * @param stdClass $quiz Quiz instance record.
      * @param int $groupid Active group id (0 = all visible groups).
+     * @param string $sortcolumn Column to sort by.
+     * @param string $sortdirection Sort direction ('asc' or 'desc').
      * @return stdClass MonitorState payload.
      */
-    public static function get_state(stdClass $course, cm_info|stdClass $cm, stdClass $quiz, int $groupid = 0): stdClass {
+    public static function get_state(
+        stdClass $course,
+        cm_info|stdClass $cm,
+        stdClass $quiz,
+        int $groupid = 0,
+        string $sortcolumn = 'status',
+        string $sortdirection = 'asc'
+    ): stdClass {
         global $DB;
 
         $context = context_module::instance($cm->id);
         $now = time();
+
+        $canviewattempts = has_capability('mod/quiz:viewreports', $context);
+
+        // Can this user view log records in this context?
+        $canviewlogs = has_any_capability(['report/log:view', 'report/log:viewtoday'], $context);
 
         // Resolve group for enrolment query (respect quiz report group mode).
         if ($groupid <= 0) {
@@ -132,7 +168,7 @@ class monitor_manager {
             $rows[] = self::build_student_row($user, $relevant, $totalquestions, $quiz, $context, $now, $showemail);
         }
 
-        self::sort_student_rows($rows);
+        self::sort_student_rows($rows, $sortcolumn, $sortdirection);
 
         $userids = array_map(static fn(stdClass $row): int => (int) $row->userid, $rows);
         $hasnotemap = student_note_manager::get_hasnote_map((int) $quiz->id, $userids);
@@ -190,7 +226,7 @@ class monitor_manager {
 
         $attemptids = [];
         foreach ($rows as $row) {
-            if ($row->status === self::STATUS_INPROGRESS && $row->attemptid !== null) {
+            if (in_array($row->status, self::INPROGRESS_OR_IDLE) && $row->attemptid !== null) {
                 $attemptids[] = (int) $row->attemptid;
             }
         }
@@ -206,22 +242,26 @@ class monitor_manager {
 
         $summary = self::build_summary($rows, count($students));
 
-        $canextend = extend_time_manager::user_can_extend($context);
-        $inprogresscount = $summary->inprogress->count;
-
         $state = (object) [
-            'quizid' => (int) $quiz->id,
+            'courseid' => (int) $course->id,
             'cmid' => (int) $cm->id,
+            'quizid' => (int) $quiz->id,
             'quizname' => format_string($quiz->name, true, ['context' => $context]),
+            'quizpassword' => $quiz->password,
             'updatedat' => $now,
             'totalstudents' => count($students),
             'summary' => $summary,
             'students' => $rows,
             'hasstudents' => count($students) > 0,
-            'canextend' => $canextend,
-            'inprogresscount' => $inprogresscount,
+            'canextend' => extend_time_manager::user_can_extend($context),
+            'inprogresscount' => $summary->inprogress->count,
+            'idlecount' => $summary->idle->count,
             'onesessionactive' => $onesessionactive,
             'canunblock' => $canunblock,
+            'canviewattempts' => $canviewattempts,
+            'canviewlogs' => $canviewlogs,
+            'sortcolumn' => $sortcolumn,
+            'sortdirection' => $sortdirection,
             'canviewoverrides' => $canviewoverrides,
             'useroverridecount' => $useroverridecount,
             'groupoverridecount' => $groupoverridecount,
@@ -254,7 +294,7 @@ class monitor_manager {
             if (self::is_active_attempt_state($attempt->state)) {
                 return $attempt;
             }
-            if (in_array($attempt->state, self::completed_attempt_states(), true) && $latestfinished === null) {
+            if (self::is_completed_attempt_state($attempt->state) && $latestfinished === null) {
                 $latestfinished = $attempt;
             }
         }
@@ -275,6 +315,12 @@ class monitor_manager {
                     'badgeclass' => 'badge-warning',
                     'progressbarclass' => 'bg-warning',
                     'tileborderclass' => 'border-warning',
+                ];
+            case self::STATUS_IDLE:
+                return [
+                    'badgeclass' => 'badge-danger',
+                    'progressbarclass' => 'bg-danger',
+                    'tileborderclass' => 'border-danger',
                 ];
             case self::STATUS_COMPLETED:
                 return [
@@ -333,6 +379,9 @@ class monitor_manager {
     /**
      * Map a Moodle attempt state to monitor status.
      *
+     * Note that an INPROGRESS status may be changed to an IDLE status later,
+     * depending on the user activity. See the "build_student_row()" method.
+     *
      * @param stdClass|null $attempt Relevant attempt or null.
      * @return string
      */
@@ -343,7 +392,7 @@ class monitor_manager {
         if (self::is_active_attempt_state($attempt->state)) {
             return self::STATUS_INPROGRESS;
         }
-        if (in_array($attempt->state, self::completed_attempt_states(), true)) {
+        if (self::is_completed_attempt_state($attempt->state)) {
             return self::STATUS_COMPLETED;
         }
         return self::STATUS_NOTSTARTED;
@@ -388,12 +437,25 @@ class monitor_manager {
                     $endtime = $accessmanager->get_end_time($attempt);
                     if ($endtime !== false) {
                         $attemptendat = (int) $endtime;
+
+                        // When there is no time limit and timeclose is more than an hour away,
+                        // timeremaining is set to FALSE and 00:00 is displayed in the monitor.
+                        // This is not what we want, so we recalculate and override it.
+                        // See QUIZ_SHOW_TIME_BEFORE_DEADLINE.
+                        if ($timeremaining === false && $endtime > $now) {
+                            $timeremaining = $endtime - $now;
+                        }
                     }
+                    // Format timeremaining.
                     if ($timeremaining !== false && $timeremaining >= 0) {
                         $timeremainingdisplay = self::format_duration((int) $timeremaining);
                     } else if ($timeremaining !== false && $timeremaining < 0) {
                         $timeremaining = 0;
                         $timeremainingdisplay = get_string('timeup', 'quiz_livequizmonitor');
+                    }
+                    if (self::is_attempt_idle($attemptobj, $now)) {
+                        $status = self::STATUS_IDLE;
+                        $statuslabel = self::status_label($status);
                     }
                 }
             } catch (\Exception $e) {
@@ -414,9 +476,14 @@ class monitor_manager {
 
         $canextend = extend_time_manager::user_can_extend($context);
 
+        $hastimer = in_array($status, self::INPROGRESS_OR_IDLE) && $timeremaining !== null;
+
         return (object) [
+            'courseid' => (int) $quiz->course,
             'userid' => (int) $user->id,
             'fullname' => fullname($user),
+            'firstinitial' => \core_text::strtoupper(\core_text::substr($user->firstname, 0, 1)),
+            'lastinitial' => \core_text::strtoupper(\core_text::substr($user->lastname, 0, 1)),
             'email' => $showemail ? $user->email : '',
             'showemail' => $showemail,
             'status' => $status,
@@ -430,10 +497,10 @@ class monitor_manager {
             'progresstext' => $progresstext,
             'timeremaining' => $timeremaining,
             'timeremainingdisplay' => $timeremainingdisplay,
-            'hastimer' => $status === self::STATUS_INPROGRESS && $timeremaining !== null,
             'searchtext' => self::build_searchtext($user, $showemail),
             'attemptendat' => $attemptendat,
             'canextend' => $canextend,
+            'hastimer' => $hastimer,
             'hasnote' => false,
             'hasuseroverride' => false,
             'hasusertimeoverride' => false,
@@ -471,11 +538,34 @@ class monitor_manager {
         switch ($status) {
             case self::STATUS_INPROGRESS:
                 return get_string('status:inprogress', 'quiz_livequizmonitor');
+            case self::STATUS_IDLE:
+                return get_string('status:idle', 'quiz_livequizmonitor');
             case self::STATUS_COMPLETED:
                 return get_string('status:completed', 'quiz_livequizmonitor');
             default:
                 return get_string('status:notstarted', 'quiz_livequizmonitor');
         }
+    }
+
+    /**
+     * Check whether or not the given quiz attempt is idle,
+     * where "idle" means "no activity within the last 5 minutes".
+     *
+     * @param quiz_attempt $attemptobj The quiz attempt.
+     * @param int $timenow Time stamp for the current time.
+     * @return bool TRUE if the attempt is idle; otherwise FALSE.
+     */
+    protected static function is_attempt_idle(quiz_attempt $attemptobj, int $timenow): bool {
+        $timestamp = $timenow - self::IDLE_THRESHOLD_SECONDS;
+
+        foreach ($attemptobj->get_slots() as $slot) {
+            if ($attemptobj->get_question_action_time($slot) > $timestamp) {
+                return false;
+            }
+        }
+
+        // No recent activity detected, so attempt is idle.
+        return true;
     }
 
     /**
@@ -496,23 +586,75 @@ class monitor_manager {
     }
 
     /**
-     * Sort rows: in progress, not started, completed; then by fullname.
+     * Sort rows by the requested column and direction.
      *
      * @param array $rows Student rows (by reference).
+     * @param string $sortcolumn Column to sort by.
+     * @param string $sortdirection Sort direction: asc or desc.
      */
-    protected static function sort_student_rows(array &$rows): void {
-        $rank = [
-            self::STATUS_INPROGRESS => 0,
-            self::STATUS_NOTSTARTED => 1,
-            self::STATUS_COMPLETED => 2,
+    protected static function sort_student_rows(
+        array &$rows,
+        string $sortcolumn = 'status',
+        string $sortdirection = 'asc'
+    ): void {
+        $sortable = [
+            'status' => 'status',
+            'fullname' => 'fullname',
+            'email' => 'email',
+            'progress' => 'progresspercent',
+            'timeremaining' => 'timeremaining',
         ];
 
-        usort($rows, static function (stdClass $a, stdClass $b) use ($rank): int {
-            $cmp = ($rank[$a->status] ?? 99) <=> ($rank[$b->status] ?? 99);
-            if ($cmp !== 0) {
-                return $cmp;
+        // Sanity check on incoming values.
+        $sortcolumn = $sortable[$sortcolumn] ?? 'status';
+        $sortdirection = $sortdirection === 'desc' ? 'desc' : 'asc';
+
+        $rank = [
+            self::STATUS_INPROGRESS => 0,
+            self::STATUS_IDLE => 1,
+            self::STATUS_NOTSTARTED => 2,
+            self::STATUS_COMPLETED => 3,
+        ];
+
+        usort($rows, static function (
+            stdClass $a,
+            stdClass $b
+        ) use (
+            $sortcolumn,
+            $sortdirection,
+            $rank
+        ): int {
+            if ($sortcolumn === 'status') {
+                // Status uses defined rank rather than alphabetical order.
+                // The spaceship operator, <=>, works like strcmp for numbers.
+                $cmp = ($rank[$a->status] ?? 99) <=> ($rank[$b->status] ?? 99);
+            } else {
+                $valuea = $a->{$sortcolumn} ?? null;
+                $valueb = $b->{$sortcolumn} ?? null;
+
+                if ($valuea === $valueb) {
+                    $cmp = 0;
+                } else if ($valuea === null) {
+                    $cmp = 1;
+                } else if ($valueb === null) {
+                    $cmp = -1;
+                } else if (is_numeric($valuea) && is_numeric($valueb)) {
+                    $cmp = $valuea <=> $valueb;
+                } else {
+                    $cmp = strcmp((string) $valuea, (string) $valueb);
+                }
             }
-            return strcmp($a->fullname, $b->fullname);
+
+            if ($sortdirection === 'desc') {
+                $cmp = -$cmp;
+            }
+
+            // Name tie-break stays A→Z regardless of sort direction.
+            if ($cmp === 0) {
+                $cmp = strcmp($a->fullname, $b->fullname);
+            }
+
+            return $cmp;
         });
     }
 
@@ -527,6 +669,7 @@ class monitor_manager {
         $counts = [
             self::STATUS_NOTSTARTED => 0,
             self::STATUS_INPROGRESS => 0,
+            self::STATUS_IDLE => 0,
             self::STATUS_COMPLETED => 0,
         ];
 
@@ -556,6 +699,7 @@ class monitor_manager {
         return (object) [
             'notstarted' => $buildbucket(self::STATUS_NOTSTARTED, 'summary:notstarted'),
             'inprogress' => $buildbucket(self::STATUS_INPROGRESS, 'summary:inprogress'),
+            'idle' => $buildbucket(self::STATUS_IDLE, 'summary:idle'),
             'completed' => $buildbucket(self::STATUS_COMPLETED, 'summary:completed'),
         ];
     }

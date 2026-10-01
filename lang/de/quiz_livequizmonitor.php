@@ -24,13 +24,14 @@
 
 defined('MOODLE_INTERNAL') || die();
 
+$string['attempts:showlabel'] = 'Versuche anzeigen';
 $string['emptycohort'] = 'Für dieses Quiz wurden keine berechtigten Teilnehmenden gefunden.';
 $string['error:groupnotvisible'] = 'Sie haben keine Berechtigung, diese Gruppe in diesem Monitor anzuzeigen.';
 $string['error:usernotvisible'] = 'Die ausgewählte Person ist in dieser Monitor-Ansicht nicht sichtbar.';
 $string['extend:addtime'] = 'Zeit hinzufügen';
 $string['extend:bulklabel'] = 'Zeit verlängern';
 $string['extend:confirm'] = 'Bestätigen — {$a} Min. hinzufügen';
-$string['extend:errornoinprogress'] = 'Derzeit sind keine Teilnehmenden in Bearbeitung.';
+$string['extend:errornoinprogress'] = 'Derzeit sind keine Studierenden in Bearbeitung (oder im Leerlauf).';
 $string['extend:errornopermission'] = 'Sie haben keine Berechtigung, die Quiz-Zeit zu verlängern.';
 $string['extend:mineach'] = '+{$a} Min. je Person';
 $string['extend:modalbodybulk'] = 'Allen {$a->count} Teilnehmenden, die das Quiz gerade bearbeiten, wird Zeit hinzugefügt. Die Quiz-Schließzeit bleibt unverändert.';
@@ -63,6 +64,7 @@ $string['liveindicator'] = 'Live';
 $string['livequizmonitor'] = 'Live-Monitor';
 $string['livequizmonitor:view'] = 'Live-Quiz-Monitor-Bericht anzeigen';
 $string['livequizmonitorreport'] = 'Live-Monitor';
+$string['logs:showlabel'] = 'Logs anzeigen';
 $string['message:timeextendedbody'] = 'Ihre Lehrperson hat {$a->minutes} Minuten zu Ihrem Versuch für das Quiz „{$a->quizname}“ hinzugefügt.';
 $string['message:timeextendedsmall'] = '+{$a} Min. zu Ihrem Quiz-Versuch hinzugefügt';
 $string['message:timeextendedsubject'] = 'Zusätzliche Zeit für {$a}';
@@ -98,11 +100,16 @@ $string['privacy:metadata:notes:timemodified'] = 'Zeitpunkt der letzten Änderun
 $string['privacy:metadata:notes:userid'] = 'Die Person, auf die sich die Notiz bezieht.';
 $string['privacy:metadata:notes:usermodified'] = 'Die Person, die die Notiz zuletzt bearbeitet hat.';
 $string['progressanswered'] = '{$a->answered} von {$a->total} beantwortet';
+$string['showpassword:label'] = 'Quiz-Passwort anzeigen';
+$string['showpassword:modaltitle'] = 'Quiz-Passwort';
+$string['sortby'] = 'Sortieren nach {$a}';
 $string['staleindicator'] = 'Aktualisierung pausiert — letzte bekannte Daten werden angezeigt';
 $string['status:completed'] = 'Abgeschlossen';
+$string['status:idle'] = 'Inaktiv';
 $string['status:inprogress'] = 'In Bearbeitung';
 $string['status:notstarted'] = 'Nicht begonnen';
 $string['summary:completed'] = 'Abgeschlossen';
+$string['summary:idle'] = 'Inaktiv';
 $string['summary:inprogress'] = 'In Bearbeitung';
 $string['summary:notstarted'] = 'Nicht begonnen';
 $string['table:actions'] = 'Aktionen';

@@ -6,14 +6,15 @@
     Example context (json):
     {
         "summary": {
-            "notstarted": {"label": "Not started", "count": 1, "percent": 25, "statusclass": "border-secondary"},
-            "inprogress": {"label": "In progress", "count": 2, "percent": 50, "statusclass": "border-info"},
-            "completed": {"label": "Completed", "count": 1, "percent": 25, "statusclass": "border-success"}
+            "notstarted": {"label": "Not started", "count": 1, "percent": 20, "statusclass": "border-secondary"},
+            "idle": {"label": "Idle", "count": 1, "percent": 20, "statusclass": "border-danger"},
+            "inprogress": {"label": "In progress", "count": 2, "percent": 40, "statusclass": "border-info"},
+            "completed": {"label": "Completed", "count": 1, "percent": 20, "statusclass": "border-success"}
         }
     }
 }}
 <div class="livequizmonitor-summary-tiles row g-3 mb-4" data-region="summary-tiles">
-    <div class="col-md-4">
+    <div class="col-md-3">
         <div class="card livequizmonitor-tile livequizmonitor-summary-tile border-left {{summary.notstarted.statusclass}}"
              data-action="filter-status"
              data-status="notstarted"
@@ -23,11 +24,25 @@
             <div class="card-body">
                 <div class="livequizmonitor-tile-label">{{summary.notstarted.label}}</div>
                 <div class="livequizmonitor-tile-count" data-summary="notstarted">{{summary.notstarted.count}}</div>
-                <div class="livequizmonitor-tile-percent" data-summary-pct="notstarted">{{summary.notstarted.percent}}%</div>
+                <div class="livequizmonitor-tile-percent" data-summary-pct="notstarted">{{#str}} percents, moodle, {{summary.notstarted.percent}} {{/str}}</div>
             </div>
         </div>
     </div>
-    <div class="col-md-4">
+    <div class="col-md-3">
+        <div class="card livequizmonitor-tile livequizmonitor-summary-tile border-left {{summary.idle.statusclass}}"
+             data-action="filter-status"
+             data-status="idle"
+             role="button"
+             tabindex="0"
+             aria-pressed="false">
+            <div class="card-body">
+                <div class="livequizmonitor-tile-label">{{summary.idle.label}}</div>
+                <div class="livequizmonitor-tile-count" data-summary="idle">{{summary.idle.count}}</div>
+                <div class="livequizmonitor-tile-percent" data-summary-pct="idle">{{#str}} percents, moodle, {{summary.idle.percent}} {{/str}}</div>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
         <div class="card livequizmonitor-tile livequizmonitor-summary-tile border-left {{summary.inprogress.statusclass}}"
              data-action="filter-status"
              data-status="inprogress"
@@ -37,11 +52,11 @@
             <div class="card-body">
                 <div class="livequizmonitor-tile-label">{{summary.inprogress.label}}</div>
                 <div class="livequizmonitor-tile-count" data-summary="inprogress">{{summary.inprogress.count}}</div>
-                <div class="livequizmonitor-tile-percent" data-summary-pct="inprogress">{{summary.inprogress.percent}}%</div>
+                <div class="livequizmonitor-tile-percent" data-summary-pct="inprogress">{{#str}} percents, moodle, {{summary.inprogress.percent}} {{/str}}</div>
             </div>
         </div>
     </div>
-    <div class="col-md-4">
+    <div class="col-md-3">
         <div class="card livequizmonitor-tile livequizmonitor-summary-tile border-left {{summary.completed.statusclass}}"
              data-action="filter-status"
              data-status="completed"
@@ -51,7 +66,7 @@
             <div class="card-body">
                 <div class="livequizmonitor-tile-label">{{summary.completed.label}}</div>
                 <div class="livequizmonitor-tile-count" data-summary="completed">{{summary.completed.count}}</div>
-                <div class="livequizmonitor-tile-percent" data-summary-pct="completed">{{summary.completed.percent}}%</div>
+                <div class="livequizmonitor-tile-percent" data-summary-pct="completed">{{#str}} percents, moodle, {{summary.completed.percent}} {{/str}}</div>
             </div>
         </div>
     </div>

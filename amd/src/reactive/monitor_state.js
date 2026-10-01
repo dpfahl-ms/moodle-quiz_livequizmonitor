@@ -46,6 +46,12 @@ const emptySummary = () => ({
         label: '',
         statusclass: 'border-secondary',
     },
+    idle: {
+        count: 0,
+        percent: 0,
+        label: '',
+        statusclass: 'border-danger',
+    },
     inprogress: {
         count: 0,
         percent: 0,
@@ -72,6 +78,7 @@ export const createInitialState = () => ({
         quizid: 0,
         cmid: 0,
         quizname: '',
+        quizpassword: '',
         updatedat: 0,
         totalstudents: 0,
         hasstudents: false,
@@ -83,13 +90,18 @@ export const createInitialState = () => ({
             useroverride: false,
             groupoverride: false,
         },
+        sortcolumn: 'status',
+        sortdirection: 'asc',
         canextend: false,
         inprogresscount: 0,
+        idlecount: 0,
         onesessionactive: false,
         canunblock: false,
         canviewoverrides: false,
         useroverridecount: 0,
         groupoverridecount: 0,
+        canviewattempts: false,
+        canviewlogs: false,
     },
     summary: emptySummary(),
     students: [],
@@ -121,9 +133,12 @@ class MonitorMutations {
         stateManager.state.meta.quizid = payload.quizid;
         stateManager.state.meta.cmid = payload.cmid;
         stateManager.state.meta.quizname = payload.quizname;
+        stateManager.state.meta.quizpassword = payload.quizpassword;
         stateManager.state.meta.updatedat = payload.updatedat;
         stateManager.state.meta.totalstudents = payload.totalstudents;
         stateManager.state.meta.hasstudents = payload.hasstudents;
+        stateManager.state.meta.sortcolumn = payload.sortcolumn;
+        stateManager.state.meta.sortdirection = payload.sortdirection;
         stateManager.state.meta.stale = false;
         if (payload.canextend !== undefined) {
             stateManager.state.meta.canextend = payload.canextend;
@@ -131,11 +146,20 @@ class MonitorMutations {
         if (payload.inprogresscount !== undefined) {
             stateManager.state.meta.inprogresscount = payload.inprogresscount;
         }
+        if (payload.idlecount !== undefined) {
+            stateManager.state.meta.idlecount = payload.idlecount;
+        }
         if (payload.onesessionactive !== undefined) {
             stateManager.state.meta.onesessionactive = payload.onesessionactive;
         }
         if (payload.canunblock !== undefined) {
             stateManager.state.meta.canunblock = payload.canunblock;
+        }
+        if (payload.canviewattempts !== undefined) {
+            stateManager.state.meta.canviewattempts = payload.canviewattempts;
+        }
+        if (payload.canviewlogs !== undefined) {
+            stateManager.state.meta.canviewlogs = payload.canviewlogs;
         }
         if (payload.canviewoverrides !== undefined) {
             stateManager.state.meta.canviewoverrides = payload.canviewoverrides;
@@ -148,7 +172,7 @@ class MonitorMutations {
         }
 
         // Update summary buckets in place so watchers receive summary.<bucket>:updated events.
-        ['notstarted', 'inprogress', 'completed'].forEach((key) => {
+        ['notstarted', 'inprogress', 'idle', 'completed'].forEach((key) => {
             if (payload.summary?.[key]) {
                 stateManager.state.summary[key] = payload.summary[key];
             }
@@ -199,6 +223,29 @@ class MonitorMutations {
             const current = stateManager.state.meta.filters.status;
             stateManager.state.meta.filters.status = current === status ? 'all' : status;
         }
+        stateManager.setReadOnly(true);
+    }
+
+    /**
+     * Update the sort column and direction.
+     *
+     * @param {StateManager} stateManager
+     * @param {string} column Name of the selected column
+     */
+    setSort(stateManager, column) {
+        stateManager.setReadOnly(false);
+
+        const meta = stateManager.state.meta;
+
+        if (meta.sortcolumn === column) {
+            // Subsequent clicks on the same column toggle the sort direction.
+            meta.sortdirection = meta.sortdirection === 'asc' ? 'desc' : 'asc';
+        } else {
+            // First click on a column sets column name and initial sort direction.
+            meta.sortcolumn = column;
+            meta.sortdirection = 'asc';
+        }
+
         stateManager.setReadOnly(true);
     }
 

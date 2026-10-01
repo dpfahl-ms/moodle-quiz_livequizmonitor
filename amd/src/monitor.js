@@ -27,6 +27,7 @@ import Templates from 'core/templates';
 import {BaseComponent} from 'core/reactive';
 import {matchesFilters, countVisible} from 'quiz_livequizmonitor/filter_utils';
 import {createMonitorReactive, formatDuration} from 'quiz_livequizmonitor/reactive/monitor_state';
+import {showPasswordModal} from 'quiz_livequizmonitor/show_password_modal';
 import {showExtendModal} from 'quiz_livequizmonitor/extend_time_modal';
 import {showStudentNoteModal} from 'quiz_livequizmonitor/student_note_modal';
 import {showUnblockModal} from 'quiz_livequizmonitor/unblock_confirm_modal';
@@ -76,6 +77,7 @@ class MonitorComponent extends BaseComponent {
             EMPTYCOHORT: '[data-region="empty-cohort"]',
             SUMMARYTILE: '.livequizmonitor-summary-tile',
             EXTENDBULK: '[data-action="extend-bulk"]',
+            SHOWPASSWORD: '[data-action="show-password"]',
         };
     }
 
@@ -98,8 +100,9 @@ class MonitorComponent extends BaseComponent {
      * @param {HTMLElement} root Root element
      */
     initIdsAndFlags(descriptor, root) {
-        this.cmid = parseInt(descriptor.cmid ?? root.dataset.cmid, 10);
+        this.cmid = parseInt(descriptor.cmid ?? root.dataset.cmid ?? 0, 10);
         this.groupid = parseInt(descriptor.groupid ?? root.dataset.groupid ?? 0, 10);
+        this.courseId = parseInt(descriptor.courseid ?? root.dataset.courseid ?? 1, 10);
         this.showEmailColumn = root.dataset.showEmail === '1';
         this.showActionsColumn = root.dataset.showActions === '1';
         this.lastUpdatedPrefix = root.dataset.lastupdatedPrefix ?? '';
@@ -120,6 +123,12 @@ class MonitorComponent extends BaseComponent {
         this.actionsMenuLabel = root.dataset.actionsMenuLabel ?? 'Actions';
         this.unblockRowLabel = root.dataset.unblockLabel ?? 'Unblock user';
         this.blockedFlagLabel = root.dataset.blockedFlagLabel ?? 'Blocked';
+        this.showAttemptsLabel = root.dataset.showAttemptsLabel ?? 'Show attempts';
+        this.canviewattempts = root.dataset.canviewattempts === '1';
+        this.showLogsLabel = root.dataset.showLogsLabel ?? 'Show logs';
+        this.canviewlogs = root.dataset.canviewlogs === '1';
+        this.sortAscendingLabel = root.dataset.sortAscending ?? 'Ascending';
+        this.sortDescendingLabel = root.dataset.sortDescending ?? 'Descending';
         this.userOverrideFlagLabel = root.dataset.useroverrideFlagLabel ?? 'Has extension';
         this.userTimeOverrideFlagLabel = root.dataset.usertimeoverrideFlagLabel ?? 'Time-related override';
         this.groupOverrideFlagLabel = root.dataset.groupoverrideFlagLabel ?? 'With group override';
@@ -144,6 +153,7 @@ class MonitorComponent extends BaseComponent {
             {watch: 'meta.updatedat:updated', handler: this.renderLastUpdated},
             {watch: 'meta.stale:updated', handler: this.renderStaleIndicator},
             {watch: 'summary.notstarted:updated', handler: this.renderSummary},
+            {watch: 'summary.idle:updated', handler: this.renderSummary},
             {watch: 'summary.inprogress:updated', handler: this.renderSummary},
             {watch: 'summary.completed:updated', handler: this.renderSummary},
             {watch: 'students:created', handler: this.renderStudents},
@@ -170,10 +180,13 @@ class MonitorComponent extends BaseComponent {
             {watch: 'meta.canunblock:updated', handler: this.renderStudents},
             {watch: 'meta.hasstudents:updated', handler: this.renderCohortLayout},
             {watch: 'summary.notstarted:updated', handler: this.renderFilterToolbar},
+            {watch: 'summary.idle:updated', handler: this.renderFilterToolbar},
             {watch: 'summary.inprogress:updated', handler: this.renderFilterToolbar},
             {watch: 'summary.inprogress:updated', handler: this.renderBulkExtendButton},
             {watch: 'summary.completed:updated', handler: this.renderFilterToolbar},
             {watch: 'meta.totalstudents:updated', handler: this.renderFilterToolbar},
+            {watch: 'meta.sortcolumn:updated', handler: this.renderSortIndicators},
+            {watch: 'meta.sortdirection:updated', handler: this.renderSortIndicators},
             {watch: 'meta.useroverridecount:updated', handler: this.renderFilterToolbar},
             {watch: 'meta.groupoverridecount:updated', handler: this.renderFilterToolbar},
             {watch: 'meta.canviewoverrides:updated', handler: this.renderFilterToolbar},
@@ -185,6 +198,7 @@ class MonitorComponent extends BaseComponent {
      */
     stateReady() {
         this.bindFilterEvents();
+        this.bindSortEvents();
         this.bindExtendEvents();
         this.bindNoteEvents();
         this.startPolling();
@@ -218,6 +232,13 @@ class MonitorComponent extends BaseComponent {
         if (noteLink && this.element.contains(noteLink)) {
             event.preventDefault();
             this.openStudentNoteModal(noteLink);
+            return;
+        }
+
+        const passwordBtn = event.target.closest(this.selectors.SHOWPASSWORD);
+        if (passwordBtn && this.element.contains(passwordBtn)) {
+            event.preventDefault();
+            this.openShowPasswordModal();
             return;
         }
 
@@ -283,20 +304,52 @@ class MonitorComponent extends BaseComponent {
     }
 
     /**
+     * Open show-password modal and refresh on success.
+     */
+    async openShowPasswordModal() {
+        const state = this.getState();
+        await showPasswordModal({
+            quizpassword: state.meta.quizpassword ?? ''
+        });
+    }
+
+    /**
      * Open bulk extend modal and refresh on success.
      */
     async openBulkExtendModal() {
-        const state = this.getState();
-        const inprogresscount = state?.summary?.inprogress?.count ?? state?.meta?.inprogresscount ?? 0;
         const response = await showExtendModal({
             mode: 'bulk',
             cmid: this.cmid,
             groupid: this.groupid,
-            inprogresscount,
+            inprogresscount: this.getInProgressCount(true),
         });
         if (response) {
             this.poll();
         }
+    }
+
+    /**
+     * Fetch the inprogress count from the current state.
+     *
+     * @param {boolean} [checkmeta=false] - Whether to fall back to
+     *   state.meta.inprogresscount when the summary counts are zero.
+     * @returns {number} The resolved in-progress count, or 0 if none is available.
+     */
+    getInProgressCount(checkmeta) {
+        // Shortcuts to state and summary objects.
+        const state = this.getState() ?? {};
+        const summary = state.summary ?? {};
+        // If the summary counts are available, use those.
+        const count = (summary.inprogress?.count ?? 0) + (summary.idle?.count ?? 0);
+        if (count) {
+            return count;
+        }
+        // If the meta values is available, use those.
+        if (checkmeta) {
+            return (state.meta?.inprogresscount ?? 0) + (state.meta?.idlecount ?? 0);
+        }
+        // No counts are available, return 0.
+        return 0;
     }
 
     /**
@@ -374,12 +427,10 @@ class MonitorComponent extends BaseComponent {
      * Enable or disable bulk extend button from reactive in-progress count.
      */
     renderBulkExtendButton() {
-        const button = this.getElement(this.selectors.EXTENDBULK);
-        if (!button) {
-            return;
+        const btn = this.getElement(this.selectors.EXTENDBULK);
+        if (btn) {
+            btn.disabled = this.getInProgressCount(false) === 0;
         }
-        const count = this.getState()?.summary?.inprogress?.count ?? 0;
-        button.disabled = count === 0;
     }
 
     /**
@@ -400,6 +451,13 @@ class MonitorComponent extends BaseComponent {
         }
 
         this.addEventListener(this.element, 'keydown', this.handleFilterKeydown);
+    }
+
+    /**
+     * Bind sortable table header events.
+     */
+    bindSortEvents() {
+        this.addEventListener(this.element, 'click', this.handleSortClick);
     }
 
     /**
@@ -496,6 +554,29 @@ class MonitorComponent extends BaseComponent {
     }
 
     /**
+     * Delegate clicks on column headings.
+     *
+     * @param {Event} event
+     */
+    handleSortClick(event) {
+        const trigger = event.target.closest('[data-action="sort-column"]');
+
+        if (!trigger || !this.element.contains(trigger)) {
+            return;
+        }
+
+        const column = trigger.dataset.sortColumn;
+
+        if (!column) {
+            return;
+        }
+
+        event.preventDefault();
+        this.reactive.dispatch('setSort', column);
+        this.poll();
+    }
+
+    /**
      * Clean up timers on destroy.
      */
     destroy() {
@@ -527,26 +608,36 @@ class MonitorComponent extends BaseComponent {
 
     /**
      * Poll server for fresh monitor state.
+     *
+     * @returns {Promise<void>}
      */
     async poll() {
         if (this.pollInFlight) {
             return;
         }
+
         this.pollInFlight = true;
         try {
+            const state = this.getState();
+
             const response = await Ajax.call([{
                 methodname: 'quiz_livequizmonitor_get_monitor_state',
                 args: {
                     cmid: this.cmid,
                     groupid: this.groupid,
+                    sortcolumn: state.meta.sortcolumn,
+                    sortdirection: state.meta.sortdirection,
                 },
             }])[0];
+
             if (response.onesessionactive !== undefined) {
                 this.onesessionactive = !!response.onesessionactive;
             }
+
             if (response.canunblock !== undefined) {
                 this.canunblock = !!response.canunblock;
             }
+
             this.reactive.dispatch('refreshState', response);
             this.hasReceivedPoll = true;
             this.renderCohortLayout();
@@ -595,7 +686,7 @@ class MonitorComponent extends BaseComponent {
         if (!summary) {
             return;
         }
-        ['inprogress', 'notstarted', 'completed'].forEach((key) => {
+        ['notstarted', 'idle', 'inprogress', 'completed'].forEach((key) => {
             const bucket = summary[key];
             if (!bucket) {
                 return;
@@ -612,19 +703,78 @@ class MonitorComponent extends BaseComponent {
     }
 
     /**
-     * Return student rows from reactive state (StateMap or array).
+     * Return student rows from reactive state, sorted by the active column.
+     *
+     * Note: the sorting algorithm here mirrors the one in "sort_student_rows()".
+     * See "class/local/manager/monitor_manager.php".
      *
      * @returns {Array}
      */
     getStudentRows() {
-        const students = this.getState()?.students;
+        const state = this.getState();
+        const students = state?.students;
+
         if (!students) {
             return [];
         }
-        if (students instanceof Map) {
-            return [...students.values()];
-        }
-        return students;
+
+        const rows = students instanceof Map ? [...students.values()] : [...students];
+
+        const sortcolumn = state?.meta?.sortcolumn ?? 'status';
+        const sortdirection = state?.meta?.sortdirection ?? 'asc';
+
+        const sortable = {
+            status: 'status',
+            fullname: 'fullname',
+            email: 'email',
+            progress: 'progresspercent',
+            timeremaining: 'timeremaining',
+        };
+
+        const field = sortable[sortcolumn] ?? 'status';
+
+        const statusRank = {
+            inprogress: 0,
+            idle: 1,
+            notstarted: 2,
+            completed: 3,
+        };
+
+        rows.sort((a, b) => {
+            let cmp;
+
+            if (field === 'status') {
+                cmp = (statusRank[a.status] ?? 99) - (statusRank[b.status] ?? 99);
+            } else {
+                const valuea = a[field] ?? null;
+                const valueb = b[field] ?? null;
+
+                if (valuea === valueb) {
+                    cmp = 0;
+                } else if (valuea === null) {
+                    cmp = 1;
+                } else if (valueb === null) {
+                    cmp = -1;
+                } else if (typeof valuea === 'number' && typeof valueb === 'number') {
+                    cmp = valuea - valueb;
+                } else {
+                    cmp = String(valuea).localeCompare(String(valueb));
+                }
+            }
+
+            if (sortdirection === 'desc') {
+                cmp = -cmp;
+            }
+
+            // Name tie-break stays A→Z regardless of sort direction.
+            if (cmp === 0) {
+                cmp = String(a.fullname ?? '').localeCompare(String(b.fullname ?? ''));
+            }
+
+            return cmp;
+        });
+
+        return rows;
     }
 
     /**
@@ -662,8 +812,12 @@ class MonitorComponent extends BaseComponent {
     buildStudentRowContext(student) {
         const canextend = !!(student.canextend ?? this.canextend);
         return {
+            courseid: student.courseid ?? this.courseId,
+            cmid: student.cmid ?? this.cmid,
             userid: student.userid ?? student.id,
-            fullname: student.fullname ?? '',
+            fullname: student.fullname,
+            firstinitial: student.firstinitial,
+            lastinitial: student.lastinitial,
             email: student.email ?? '',
             statusclass: student.statusclass ?? '',
             statuslabel: student.statuslabel ?? '',
@@ -694,7 +848,11 @@ class MonitorComponent extends BaseComponent {
             extendrowlabel: this.extendRowLabel,
             unblocklabel: this.unblockRowLabel,
             blockedflaglabel: this.blockedFlagLabel,
+            showattemptslabel: this.showAttemptsLabel,
+            showlogslabel: this.showLogsLabel,
+            canviewlogs: this.canviewlogs,
             actionsmenulabel: this.actionsMenuLabel,
+            canviewattempts: this.canviewattempts,
         };
     }
 
@@ -906,6 +1064,7 @@ class MonitorComponent extends BaseComponent {
         const counts = {
             all: state.meta?.totalstudents ?? 0,
             notstarted: summary.notstarted?.count ?? 0,
+            idle: summary.idle?.count ?? 0,
             inprogress: summary.inprogress?.count ?? 0,
             completed: summary.completed?.count ?? 0,
         };
@@ -973,13 +1132,63 @@ class MonitorComponent extends BaseComponent {
     }
 
     /**
+     * Update the sort indicators on the student table headers.
+     */
+    renderSortIndicators() {
+        const state = this.getState();
+        const sortcolumn = state?.meta?.sortcolumn;
+        const sortdirection = state?.meta?.sortdirection;
+
+        const table = this.getElement(this.selectors.STUDENTTABLE);
+        if (!table) {
+            return;
+        }
+
+        const headers = table.querySelectorAll(
+            'th[data-action="sort-column"]'
+        );
+
+        headers.forEach((header) => {
+            const icon = header.querySelector('.icon');
+            if (!icon) {
+                return;
+            }
+
+            const active = header.dataset.sortColumn === sortcolumn;
+            const descending = active && sortdirection === 'desc';
+
+            icon.classList.toggle('text-primary', active);
+            icon.classList.toggle('text-secondary', !active);
+
+            icon.classList.toggle(
+                'fa-arrow-up-short-wide',
+                !descending
+            );
+            icon.classList.toggle(
+                'fa-arrow-down-short-wide',
+                descending
+            );
+
+            if (active) {
+                const label = descending ? this.sortDescendingLabel : this.sortAscendingLabel;
+                icon.setAttribute('title', label);
+                icon.setAttribute('aria-label', label);
+            } else {
+                const label = icon.dataset.sortbyLabel;
+                icon.setAttribute('title', label);
+                icon.setAttribute('aria-label', label);
+            }
+        });
+    }
+
+    /**
      * Whether extend time is available for a student row.
      *
      * @param {object} student Student state row
      * @returns {boolean}
      */
     isExtendActionEnabled(student) {
-        return student?.status === 'inprogress';
+        return student?.status === 'inprogress' || student?.status === 'idle';
     }
 
     /**
@@ -1009,6 +1218,7 @@ class MonitorComponent extends BaseComponent {
         const actionslabel = this.escapeHtml(this.actionsMenuLabel);
         const unblocklabel = this.escapeHtml(this.unblockRowLabel);
         const blockedflaglabel = this.escapeHtml(this.blockedFlagLabel);
+        const logslabel = this.escapeHtml(this.showLogsLabel);
         const notelabel = this.escapeHtml(student.hasnote ? this.noteEditLabel : this.noteAddLabel);
         const hasnote = student.hasnote ? '1' : '0';
         const showextend = !!(student.canextend ?? this.canextend);
@@ -1022,32 +1232,56 @@ class MonitorComponent extends BaseComponent {
         const isblocked = !!(student.isblocked);
 
         const extendItem = showextend ? `
-                    <a href="#"
-                       class="dropdown-item menu-action${extenddisabledClass}"
-                       role="menuitem"
-                       data-action="extend-individual"
-                       data-userid="${userid}"
-                       data-studentname="${fullname}"
-                       data-attemptendat="${attemptendat}"${extenddisabledAttrs}>
-                        <i class="fa-solid fa-clock" aria-hidden="true"></i>
-                        <span class="menu-action-text">${extendlabel}</span>
-                    </a>` : '';
+                        <a href="#"
+                            class="dropdown-item menu-action${extenddisabledClass}"
+                            role="menuitem"
+                            data-action="extend-individual"
+                            data-userid="${userid}"
+                            data-studentname="${fullname}"
+                            data-attemptendat="${attemptendat}"${extenddisabledAttrs}>
+                                <i class="fa-solid fa-clock" aria-hidden="true"></i>
+                                <span class="menu-action-text">${extendlabel}</span>
+                        </a>` : '';
 
         const unblockItem = onesessionactive ? `
-                    <a href="#"
-                       class="dropdown-item menu-action${unblockdisabledClass}"
-                       role="menuitem"
-                       data-action="unblock-student"
-                       data-userid="${userid}"
-                       data-studentname="${fullname}"
-                       data-attemptid="${attemptid}"${unblockdisabledAttrs}>
-                        <i class="fa-solid fa-unlock" aria-hidden="true"></i>
-                        <span class="menu-action-text">${unblocklabel}</span>
-                    </a>` : '';
+                        <a href="#"
+                            class="dropdown-item menu-action${unblockdisabledClass}"
+                            role="menuitem"
+                            data-action="unblock-student"
+                            data-userid="${userid}"
+                            data-studentname="${fullname}"
+                            data-attemptid="${attemptid}"${unblockdisabledAttrs}>
+                                <i class="fa-solid fa-unlock" aria-hidden="true"></i>
+                                <span class="menu-action-text">${unblocklabel}</span>
+                        </a>` : '';
 
         const flagHtml = isblocked
             ? `<i class="fa-solid fa-flag livequizmonitor-blocked-flag" title="${blockedflaglabel}" aria-hidden="true"></i>`
             : '';
+
+        // To reduce code complexity, as measured by Grunt,
+        // the attemptsItem html is built in a separate function.
+        const attemptsItem = this.buildAttemptsItemHtml(student);
+
+        const logsParams = new URLSearchParams({
+            chooselog: 1,
+            id: this.courseid,
+            user: userid,
+            modid: this.cmid,
+            showusers: 0,
+            showcourses: 0,
+        });
+
+        const logsItem = this.canviewlogs ? `
+                        <a href="${M.cfg.wwwroot}/report/log/index.php?${logsParams.toString()}"
+                           class="dropdown-item menu-action"
+                           role="menuitem"
+                           target="_blank">
+                            <i class="fa-solid fa-clipboard-list" aria-hidden="true"></i>
+                            <span class="menu-action-text">${logslabel}</span>
+                            <i class="fa-solid fa-up-right-from-square" aria-hidden="true"
+                               title="${M.util.get_string('opensinnewwindow', 'core')}"></i>
+                        </a>` : '';
 
         return `
             <div class="livequizmonitor-actions-inner">
@@ -1071,11 +1305,49 @@ class MonitorComponent extends BaseComponent {
                            data-hasnote="${hasnote}">
                             <i class="fa-solid fa-book" aria-hidden="true"></i>
                             <span class="menu-action-text">${notelabel}</span>
-                        </a>${extendItem}${unblockItem}
+                        </a>${extendItem}${unblockItem}${attemptsItem}${logsItem}
                     </div>
                 </div>${flagHtml}
             </div>
         `;
+    }
+
+    /**
+     * Build the menu item for viewing student attempts.
+     *
+     * @param {object} student data about the current student.
+     * @returns {string} HTML for the attempts menu item.
+     */
+    buildAttemptsItemHtml(student) {
+        if (!this.canviewattempts) {
+            return '';
+        }
+
+        const attemptsParams = new URLSearchParams({
+            id: this.cmid,
+            mode: 'overview',
+        });
+
+        if (student.firstinitial) {
+            attemptsParams.set('tifirst', student.firstinitial);
+        }
+
+        if (student.lastinitial) {
+            attemptsParams.set('tilast', student.lastinitial);
+        }
+
+        const attemptslabel = this.escapeHtml(this.showAttemptsLabel);
+
+        return `
+                        <a href="${M.cfg.wwwroot}/mod/quiz/report.php?${attemptsParams.toString()}"
+                           class="dropdown-item menu-action"
+                           role="menuitem"
+                           target="_blank">
+                            <i class="fa-solid fa-table-list" aria-hidden="true"></i>
+                            <span class="menu-action-text">${attemptslabel}</span>
+                            <i class="fa-solid fa-up-right-from-square" aria-hidden="true"
+                               title="${M.util.get_string('opensinnewwindow', 'core')}"></i>
+                        </a>`;
     }
 
     /**

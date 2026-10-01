@@ -46,6 +46,8 @@ class get_monitor_state extends external_api {
         return new external_function_parameters([
             'cmid' => new external_value(PARAM_INT, 'Course module id of the quiz'),
             'groupid' => new external_value(PARAM_INT, 'Group id filter', VALUE_DEFAULT, 0),
+            'sortcolumn' => new external_value(PARAM_ALPHANUM, 'Sort column name', VALUE_DEFAULT, 'status'),
+            'sortdirection' => new external_value(PARAM_ALPHA, 'Sort direction', VALUE_DEFAULT, 'asc'),
         ]);
     }
 
@@ -54,14 +56,23 @@ class get_monitor_state extends external_api {
      *
      * @param int $cmid Course module id.
      * @param int $groupid Group id.
+     * @param string $sortcolumn Sort column name.
+     * @param string $sortdirection Sort direction.
      * @return array
      */
-    public static function execute(int $cmid, int $groupid = 0): array {
+    public static function execute(
+        int $cmid,
+        int $groupid = 0,
+        string $sortcolumn = 'status',
+        string $sortdirection = 'asc'
+    ): array {
         global $DB;
 
         $params = self::validate_parameters(self::execute_parameters(), [
             'cmid' => $cmid,
             'groupid' => $groupid,
+            'sortcolumn' => $sortcolumn,
+            'sortdirection' => $sortdirection,
         ]);
 
         $cm = get_coursemodule_from_id('quiz', $params['cmid'], 0, false, MUST_EXIST);
@@ -74,7 +85,14 @@ class get_monitor_state extends external_api {
 
         supervision_scope_manager::validate_group_access((int) $params['groupid'], $cm);
 
-        $state = monitor_manager::get_state($course, $cm, $quiz, (int) $params['groupid']);
+        $state = monitor_manager::get_state(
+            $course,
+            $cm,
+            $quiz,
+            (int) $params['groupid'],
+            (string) $params['sortcolumn'],
+            (string) $params['sortdirection']
+        );
 
         return self::export_state($state);
     }
@@ -104,6 +122,8 @@ class get_monitor_state extends external_api {
         $student = new external_single_structure([
             'userid' => new external_value(PARAM_INT, 'User id'),
             'fullname' => new external_value(PARAM_TEXT, 'Full name'),
+            'firstinitial' => new external_value(PARAM_TEXT, 'Initial of first name'),
+            'lastinitial' => new external_value(PARAM_TEXT, 'Initial of last name'),
             'email' => new external_value(PARAM_TEXT, 'Email'),
             'showemail' => new external_value(PARAM_BOOL, 'Show email'),
             'status' => new external_value(PARAM_ALPHA, 'Status'),
@@ -133,25 +153,32 @@ class get_monitor_state extends external_api {
         ]);
 
         return new external_single_structure([
-            'quizid' => new external_value(PARAM_INT, 'Quiz id'),
             'cmid' => new external_value(PARAM_INT, 'CM id'),
+            'quizid' => new external_value(PARAM_INT, 'Quiz id'),
             'quizname' => new external_value(PARAM_TEXT, 'Quiz name'),
+            'quizpassword' => new external_value(PARAM_RAW, 'Quiz password'),
             'updatedat' => new external_value(PARAM_INT, 'Updated timestamp'),
             'totalstudents' => new external_value(PARAM_INT, 'Total students'),
             'hasstudents' => new external_value(PARAM_BOOL, 'Has students'),
             'canextend' => new external_value(PARAM_BOOL, 'Viewer may extend time'),
             'inprogresscount' => new external_value(PARAM_INT, 'In-progress student count'),
+            'idlecount' => new external_value(PARAM_INT, 'Idle student count'),
             'onesessionactive' => new external_value(PARAM_BOOL, 'Onesession rule active for quiz'),
             'canunblock' => new external_value(PARAM_BOOL, 'Viewer may unblock attempts'),
+            'canviewattempts' => new external_value(PARAM_BOOL, 'Viewer may view student attempts'),
+            'canviewlogs' => new external_value(PARAM_BOOL, 'Viewer may view student logs'),
             'canviewoverrides' => new external_value(PARAM_BOOL, 'Viewer may see override information'),
             'useroverridecount' => new external_value(PARAM_INT, 'Students with a user override'),
             'groupoverridecount' => new external_value(PARAM_INT, 'Students with a (relevant) group override'),
             'summary' => new external_single_structure([
                 'notstarted' => $statuscount,
+                'idle' => $statuscount,
                 'inprogress' => $statuscount,
                 'completed' => $statuscount,
             ]),
             'students' => new external_multiple_structure($student),
+            'sortcolumn' => new external_value(PARAM_ALPHANUM, 'Sort column'),
+            'sortdirection' => new external_value(PARAM_ALPHA, 'Sort direction'),
         ]);
     }
 
@@ -167,6 +194,8 @@ class get_monitor_state extends external_api {
             $entry = [
                 'userid' => $row->userid,
                 'fullname' => $row->fullname,
+                'firstinitial' => $row->firstinitial,
+                'lastinitial' => $row->lastinitial,
                 'email' => $row->email,
                 'showemail' => (bool) $row->showemail,
                 'status' => $row->status,
@@ -205,25 +234,32 @@ class get_monitor_state extends external_api {
 
         $summary = $state->summary;
         return [
-            'quizid' => $state->quizid,
             'cmid' => $state->cmid,
+            'quizid' => $state->quizid,
             'quizname' => $state->quizname,
+            'quizpassword' => $state->quizpassword,
             'updatedat' => $state->updatedat,
             'totalstudents' => $state->totalstudents,
             'hasstudents' => (bool) $state->hasstudents,
             'canextend' => (bool) ($state->canextend ?? false),
             'inprogresscount' => (int) ($state->inprogresscount ?? $summary->inprogress->count),
+            'idlecount' => (int) ($state->idlecount ?? $summary->idle->count),
             'onesessionactive' => (bool) ($state->onesessionactive ?? false),
             'canunblock' => (bool) ($state->canunblock ?? false),
+            'canviewattempts' => (bool) ($state->canviewattempts ?? false),
+            'canviewlogs' => (bool) ($state->canviewlogs ?? false),
             'canviewoverrides' => (bool) ($state->canviewoverrides ?? false),
             'useroverridecount' => (int) ($state->useroverridecount ?? 0),
             'groupoverridecount' => (int) ($state->groupoverridecount ?? 0),
             'summary' => [
                 'notstarted' => (array) $summary->notstarted,
+                'idle' => (array) $summary->idle,
                 'inprogress' => (array) $summary->inprogress,
                 'completed' => (array) $summary->completed,
             ],
             'students' => $students,
+            'sortcolumn' => $state->sortcolumn,
+            'sortdirection' => $state->sortdirection,
         ];
     }
 }
